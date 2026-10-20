@@ -1,169 +1,175 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="robots" content="noindex, nofollow">
-    <meta name="referrer" content="same-origin">
-    <meta name="theme-color" content="#005956">
-    <title>Agendar Vistoria | Yuca</title>
-    <link rel="icon" type="image/png" href="assets/img/logo-yuca-verde.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
 </head>
 <body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/yuca-design-system-019dfda8-7020-7e28-a0a7-ef3a1272a0bb/colors_and_type.css">
+<style>body{margin:0;background:#FBF2E7}a{color:#005956}a:hover{color:#098C7B}button{font-family:inherit;cursor:pointer}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;justify-content:center;font-family:Montserrat,sans-serif;color:#062840;background:#FBF2E7">
+<div style="width:100%;max-width:480px;display:flex;flex-direction:column;min-height:100vh;background:#fff;box-shadow:0 8px 32px rgba(6,40,64,.08)">
 
-<!-- NETLIFY FORMS: formulário oculto só para o Netlify detectar os campos no deploy (backup das respostas) -->
-<form name="agendamento-vistoria" netlify netlify-honeypot="bot-field" hidden>
-    <input name="bot-field">
-    <input name="hubspotTicketId">
-    <input name="ownerName"><input name="ownerPhone"><input name="ownerEmail"><input name="unitName">
-    <input name="visitType"><input name="visitDate"><input name="visitTime">
-    <input name="inspector"><input name="presence"><input name="notes">
-</form>
+<header style="background:#005956;color:#fff;padding:20px 24px;display:flex;align-items:center;gap:14px">
+  <img src="uploads/logo_yuca_branca.png" alt="Yuca" height="44" style="height:44px;width:auto;display:block">
+  <div style="width:1px;height:32px;background:rgba(255,255,255,.3)"></div>
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#C9E6CD">Agendamento de vistoria</span>
+    <span style="font-size:15px;font-weight:600">Unidade pronta para Gestão Yuca</span>
+  </div>
+</header>
 
-<div class="app">
-    <!-- Cabeçalho Yuca -->
-    <header class="yuca-header">
-        <img class="yuca-logo" src="assets/img/logo-yuca-branca.svg" alt="Yuca" width="40" height="41">
-        <div class="yuca-header-text">
-            <span class="yuca-kicker">Agendamento de vistoria</span>
-            <span class="yuca-header-title">Unidade pronta para Gestão Yuca</span>
-        </div>
-    </header>
+<sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 12px 8px">
+  <button onClick="{{ back }}" style="display:flex;align-items:center;gap:4px;border:0;background:none;color:#005956;font-weight:600;font-size:14px;padding:8px 12px;border-radius:12px" style-hover="background:#f2fbf7">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Voltar</button>
+  <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B">Etapa {{ step }} de 4</span>
+</div>
+<div style="height:4px;background:#e6eaed"><div style="height:100%;background:#12C68B;border-radius:0 4px 4px 0;transition:width .32s cubic-bezier(.16,1,.3,1);width:{{ progress }}"></div></div>
+</sc-if>
 
-    <!-- Navegação -->
-    <nav class="nav" id="nav">
-        <button class="nav-btn" id="btnBack" type="button" onclick="goBack()">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar
-        </button>
-        <span class="nav-step" id="navStep"></span>
-    </nav>
-    <div class="progress-bar" id="progressBar"></div>
+<main style="flex:1;padding:28px 24px 24px;display:flex;flex-direction:column;gap:20px">
 
-    <main class="content">
-
-        <!-- Link inválido (sem ID do HubSpot) -->
-        <section class="step" id="step-invalid">
-            <div class="state-icon state-icon--warn">!</div>
-            <h2 class="state-title">Link incompleto</h2>
-            <p class="state-subtitle">Não conseguimos identificar o seu cadastro neste link. Use o link exatamente como foi enviado pela Yuca ou fale com a gente para receber um novo.</p>
-            <a class="btn-secondary" id="invalidContact" target="_blank" rel="noopener">Falar com a Yuca no WhatsApp</a>
-        </section>
-
-        <!-- Etapa 1: Vistoriador + presença -->
-        <section class="step" id="step-1">
-            <span class="step-num">Etapa 01</span>
-            <h2 class="step-title" id="greeting">Vamos agendar sua vistoria</h2>
-            <p class="step-lead" id="unitLead">Seus dados e os da unidade já estão com a gente. Falta só escolher o melhor dia e horário.</p>
-
-            <div class="choice-card is-selected is-static">
-                <div class="choice-title">Unidade pronta para Gestão Yuca</div>
-                <div class="choice-desc">Sua unidade está pronta para ser locada. Faremos a vistoria de recebimento, as fotos da unidade para o site e as fotos das áreas comuns.</div>
-            </div>
-
-            <div class="inspector-card" id="inspectorInfoCard"></div>
-
-            <div class="callout callout--cream">
-                <strong>Você não precisa estar presente.</strong> O laudo será enviado para você assim que a vistoria for concluída.
-            </div>
-
-            <label class="field-label">Você vai estar presente na vistoria? *</label>
-            <div class="toggle-group" role="radiogroup">
-                <button type="button" class="toggle" id="pres-yes" role="radio" aria-checked="false" onclick="selectPresence('yes')">Estarei presente</button>
-                <button type="button" class="toggle" id="pres-no" role="radio" aria-checked="false" onclick="selectPresence('no')">Não estarei presente</button>
-            </div>
-
-            <div class="field-group">
-                <label class="field-label" for="notes">Recado para o vistoriador <span class="optional">(opcional)</span></label>
-                <textarea class="field-input" id="notes" maxlength="1000"
-                    placeholder="Ex: avisar a portaria, acesso pelo elevador social..."></textarea>
-            </div>
-        </section>
-
-        <!-- Etapa 2: Data -->
-        <section class="step" id="step-2">
-            <span class="step-num">Etapa 02</span>
-            <h2 class="step-title">Escolha uma data</h2>
-            <div class="summary-card" id="summaryCard"></div>
-            <div class="month-nav">
-                <button class="icon-btn" id="btnPrevMonth" type="button" onclick="changeMonth(-1)" aria-label="Mês anterior">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <span class="month-label" id="monthLabel"></span>
-                <button class="icon-btn" id="btnNextMonth" type="button" onclick="changeMonth(1)" aria-label="Próximo mês">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-            </div>
-            <div class="cal-dow">
-                <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div>
-                <div class="is-off">Sáb</div><div class="is-off">Dom</div>
-            </div>
-            <div class="cal-grid" id="calGrid"></div>
-        </section>
-
-        <!-- Etapa 3: Horário -->
-        <section class="step" id="step-3">
-            <span class="step-num">Etapa 03</span>
-            <h2 class="step-title">Escolha um horário</h2>
-            <div class="summary-card" id="summaryCard3"></div>
-            <div class="date-pill" id="selectedDateLabel"></div>
-            <div id="conflictBanner"></div>
-            <div class="section-label">Horários disponíveis</div>
-            <p class="field-hint slot-hint">Tempo médio de vistoria: <strong>1h a 1h30</strong></p>
-            <div id="timesContainer"></div>
-        </section>
-
-        <!-- Etapa 4: Revisão -->
-        <section class="step" id="step-4">
-            <span class="step-num">Etapa 04</span>
-            <h2 class="step-title">Revise seu agendamento</h2>
-            <div class="review-card" id="reviewDetails"></div>
-            <div class="review-actions">
-                <button class="btn-primary" id="btnConfirm" type="button" onclick="confirmAgendamento()">Confirmar agendamento</button>
-                <button class="btn-secondary" type="button" onclick="openEdit()">Editar agendamento</button>
-            </div>
-        </section>
-
-        <!-- Etapa 5: Concluído -->
-        <section class="step" id="step-5">
-            <div class="state-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-            </div>
-            <h2 class="state-title">Agendamento concluído!</h2>
-            <p class="state-subtitle" id="doneSubtitle"></p>
-
-            <div class="liberation-card" id="liberationCard"></div>
-
-            <div class="callout callout--cream">
-                Dúvidas ou precisa de mais alguma informação? Chame a <strong id="supportName"></strong> no WhatsApp:
-                <a id="supportLink" target="_blank" rel="noopener"></a>
-            </div>
-        </section>
-
-    </main>
-
-    <div class="bottom-wrap" id="bottomBar">
-        <button class="btn-primary" id="btnNext" type="button" onclick="goNext()">Próximo</button>
+<sc-if value="{{ s1 }}" hint-placeholder-val="{{ true }}">
+  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;letter-spacing:-.01em;color:#005956">Vamos agendar sua vistoria</h1>
+  <p style="margin:0;font-size:15px;line-height:1.55;color:#4a5d6c">Seus dados e os da unidade já estão com a gente. Falta só escolher o melhor dia e horário.</p>
+  <div style="border:1.5px solid #12C68B;background:#f2fbf7;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:6px">
+    <div style="font-weight:700;font-size:16px;color:#005956">Unidade pronta para Gestão Yuca</div>
+    <div style="font-size:14px;line-height:1.55">Sua unidade está pronta para ser locada. Faremos a vistoria de recebimento, as fotos da unidade para o site e as fotos das áreas comuns.</div>
+  </div>
+  <div style="background:#FBEACA;border-radius:16px;padding:16px 20px;font-size:14px;line-height:1.55"><strong>Você não precisa estar presente.</strong> O laudo será enviado para você assim que a vistoria for concluída.</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <label style="font-size:14px;font-weight:600">Você vai estar presente na vistoria? *</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <button onClick="{{ presYes }}" style="{{ presYesStyle }}">Estarei presente</button>
+      <button onClick="{{ presNo }}" style="{{ presNoStyle }}">Não estarei presente</button>
     </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <label style="font-size:14px;font-weight:600">Recado para o vistoriador <span style="font-weight:400;color:#6b7c8a">(opcional)</span></label>
+    <textarea placeholder="Ex: avisar a portaria, acesso pelo elevador social..." style="min-height:96px;border:1px solid #c5cdd3;border-radius:12px;padding:14px 16px;font:400 14px/1.5 Montserrat,sans-serif;color:#062840;resize:vertical;outline:none" style-focus="border-color:#12C68B;box-shadow:0 0 0 3px rgba(18,198,139,.2)"></textarea>
+  </div>
+</sc-if>
+
+<sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
+  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Escolha uma data</h1>
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <button onClick="{{ prevMonth }}" aria-label="Mês anterior" style="width:44px;height:44px;border-radius:12px;border:1px solid #dfe4e8;background:#fff;color:#062840;display:grid;place-items:center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span style="font-family:Fraunces,serif;font-weight:700;font-size:20px;text-transform:capitalize">{{ monthLabel }}</span>
+    <button onClick="{{ nextMonth }}" aria-label="Próximo mês" style="width:44px;height:44px;border-radius:12px;border:1px solid #dfe4e8;background:#fff;color:#062840;display:grid;place-items:center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B">
+    <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div style="color:#b3bdc5">Sáb</div><div style="color:#b3bdc5">Dom</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+    <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
+      <button disabled="{{ c.off }}" onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.label }}</button>
+    </sc-for>
+  </div>
+  <div style="font-size:13px;color:#6b7c8a">Vistorias de segunda a sexta, com no mínimo 1 dia de antecedência.</div>
+</sc-if>
+
+<sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
+  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Escolha um horário</h1>
+  <div style="align-self:flex-start;background:#f2fbf7;border:1px solid #C9E6CD;color:#005956;font-weight:600;font-size:14px;padding:8px 16px;border-radius:999px;text-transform:capitalize">{{ dateLong }}</div>
+  <div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B">Horários disponíveis</div>
+    <p style="margin:6px 0 0;font-size:13px;color:#6b7c8a">Tempo médio de vistoria: <strong style="color:#062840">1h a 1h30</strong></p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+    <sc-for list="{{ times }}" as="t" hint-placeholder-count="8">
+      <button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
+  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Revise seu agendamento</h1>
+  <div style="border:1px solid #e6eaed;border-radius:16px;box-shadow:0 2px 8px rgba(6,40,54,.06);overflow:hidden">
+    <sc-for list="{{ review }}" as="r" hint-placeholder-count="4">
+      <div style="display:flex;justify-content:space-between;gap:16px;padding:16px 24px;border-top:{{ r.border }}">
+        <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B;padding-top:2px">{{ r.k }}</span>
+        <span style="font-size:15px;font-weight:600;text-align:right;text-transform:capitalize">{{ r.v }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+    <button onClick="{{ confirm }}" style="height:52px;border:0;border-radius:12px;background:#12C68B;color:#062840;font-weight:700;font-size:16px" style-hover="background:#0fb27b">Confirmar agendamento</button>
+    <button onClick="{{ edit }}" style="height:52px;border:1.5px solid #005956;border-radius:12px;background:#fff;color:#005956;font-weight:700;font-size:16px" style-hover="background:#f2fbf7">Editar agendamento</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding-top:24px">
+    <div style="width:72px;height:72px;border-radius:50%;background:#12C68B;display:grid;place-items:center"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Agendamento concluído</h1>
+    <p style="margin:0;font-size:15px;line-height:1.55;color:#4a5d6c">Vistoria marcada para <strong style="color:#062840;text-transform:capitalize">{{ dateLong }}, às {{ time }}</strong>. Enviaremos o laudo assim que ela for concluída.</p>
+  </div>
+  <div style="background:#FBEACA;border-radius:16px;padding:16px 20px;font-size:14px;line-height:1.55">Dúvidas? Chame a equipe Yuca no WhatsApp: <a href="#">Falar com a Yuca</a></div>
+</sc-if>
+
+</main>
+
+<sc-if value="{{ showNext }}" hint-placeholder-val="{{ true }}">
+<div style="position:sticky;bottom:0;padding:16px 24px 24px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid #e6eaed">
+  <button onClick="{{ next }}" style="{{ nextStyle }}">Próximo</button>
+</div>
+</sc-if>
+
+</div>
 </div>
 
-<!-- Sheet: Editar agendamento -->
-<div class="sheet-overlay" id="editOverlay" onclick="if(event.target===this) closeEdit()">
-    <div class="sheet">
-        <div class="sheet-title">O que deseja editar?</div>
-        <div class="sheet-options">
-            <button type="button" onclick="goToEdit(1)">Presença e recado</button>
-            <button type="button" onclick="goToEdit(2)">Data</button>
-            <button type="button" onclick="goToEdit(3)">Horário</button>
-        </div>
-        <button type="button" class="sheet-cancel" onclick="closeEdit()">Cancelar</button>
-    </div>
-</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { step: 1, pres: null, month: new Date(2026, 9, 1), date: null, time: null };
+  renderVals() {
+    const { step, pres, month, date, time } = this.state;
+    const set = (o) => this.setState(o);
+    const today = new Date(2026, 9, 20);
+    const btn = (on) => 'height:56px;border-radius:12px;font:600 14px Montserrat,sans-serif;transition:all .2s;border:1.5px solid ' + (on ? '#12C68B;background:#f2fbf7;color:#005956' : '#c5cdd3;background:#fff;color:#062840');
+    const first = new Date(month.getFullYear(), month.getMonth(), 1);
+    const lead = (first.getDay() + 6) % 7;
+    const dim = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push({ label: '', off: true, style: 'height:44px;border:0;background:none', pick: () => {} });
+    for (let d = 1; d <= dim; d++) {
+      const dt = new Date(month.getFullYear(), month.getMonth(), d);
+      const off = dt.getDay() === 0 || dt.getDay() === 6 || dt <= today;
+      const sel = date && date.getTime() === dt.getTime();
+      cells.push({ label: d, off, pick: () => set({ date: dt, time: null, step: 3 }),
+        style: 'height:44px;border-radius:12px;font:600 14px Montserrat,sans-serif;border:0;' + (sel ? 'background:#005956;color:#fff' : off ? 'background:none;color:#c5cdd3;cursor:default' : 'background:#f2fbf7;color:#005956') });
+    }
+    const times = ['08:00','09:00','10:00','11:00','13:00','14:00','15:00','16:00'].map(t => ({ label: t, pick: () => set({ time: t }),
+      style: 'height:48px;border-radius:12px;font:600 15px Montserrat,sans-serif;border:1.5px solid ' + (time === t ? '#005956;background:#005956;color:#fff' : '#c5cdd3;background:#fff;color:#062840') }));
+    const dateLong = date ? date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+    const rows = [['Vistoria', 'Recebimento da unidade'], ['Presença', pres === 'yes' ? 'Estarei presente' : 'Não estarei presente'], ['Data', dateLong], ['Horário', time || '']];
+    const ok = (step === 1 && pres) || step === 2 && false;
+    const canNext = step === 1 ? !!pres : false;
+    return {
+      step, s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4, s5: step === 5,
+      showNav: step > 0 && step < 5, showNext: step === 1 || (step === 3 && !!time),
+      progress: (step * 25) + '%',
+      back: () => set({ step: Math.max(1, step - 1) }),
+      presYes: () => set({ pres: 'yes' }), presNo: () => set({ pres: 'no' }),
+      presYesStyle: btn(pres === 'yes'), presNoStyle: btn(pres === 'no'),
+      next: () => { if (step === 1 && pres) set({ step: 2 }); else if (step === 3 && time) set({ step: 4 }); },
+      nextStyle: 'width:100%;height:52px;border:0;border-radius:12px;font:700 16px Montserrat,sans-serif;transition:all .2s;' + ((step === 1 && !pres) ? 'background:#e6eaed;color:#8a97a2' : 'background:#12C68B;color:#062840'),
+      monthLabel: month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+      prevMonth: () => set({ month: new Date(month.getFullYear(), month.getMonth() - 1, 1) }),
+      nextMonth: () => set({ month: new Date(month.getFullYear(), month.getMonth() + 1, 1) }),
+      cells, times, dateLong, time,
+      review: rows.map((r, i) => ({ k: r[0], v: r[1], border: i ? '1px solid #e6eaed' : '0' })),
+      confirm: () => set({ step: 5 }),
+      edit: () => set({ step: 1 })
+    };
+  }
+}
 
-<script src="assets/js/config.js"></script>
-<script src="assets/js/app.js"></script>
+</script>
 </body>
 </html>
