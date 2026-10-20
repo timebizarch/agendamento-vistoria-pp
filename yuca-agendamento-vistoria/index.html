@@ -1,173 +1,806 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agendar Vistoria | Yuca</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #0a1210; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
+        .app { width: 100%; max-width: 480px; background: #0d1714; min-height: 100vh; position: relative; }
+
+        /* ── YUCA HEADER ── */
+        .yuca-header {
+            background: linear-gradient(135deg, #2d5a56 0%, #1a3d3a 100%);
+            padding: 18px 20px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .yuca-logo { display: flex; align-items: center; gap: 10px; }
+        .yuca-logomark {
+            width: 28px; height: 28px;
+            border-radius: 6px;
+            background: rgba(111,191,174,0.15);
+            border: 1px solid rgba(111,191,174,0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: 700; color: #6fbfae;
+            font-family: 'Playfair Display', serif;
+        }
+        .yuca-brand {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px; font-weight: 700;
+            color: #f2e4c8; letter-spacing: 1px;
+        }
+        .yuca-sep { color: rgba(111,191,174,0.4); font-size: 14px; margin: 0 4px; }
+        .yuca-subtitle { font-size: 10px; font-weight: 700; color: #6fbfae; text-transform: uppercase; letter-spacing: 1.5px; }
+
+        /* ── NAV BAR ── */
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 0; }
+        .header-btn { color: #6fbfae; font-size: 14px; background: none; border: none; cursor: pointer; padding: 6px 2px; font-weight: 500; letter-spacing: 0.3px; }
+        .header-title { font-size: 14px; font-weight: 600; color: #e8e8e8; }
+
+        /* ── PROGRESS ── */
+        .progress-bar { display: flex; gap: 4px; padding: 14px 20px 0; }
+        .progress-step { height: 3px; border-radius: 2px; flex: 1; background: #2a4542; transition: background 0.3s; }
+        .progress-step.done { background: #6fbfae; }
+
+        .content { padding: 24px 20px 110px; }
+
+        /* ── STEP TITLES ── */
+        .step-num {
+            display: block;
+            font-size: 11px; font-weight: 700;
+            color: #6fbfae;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            font-family: 'Inter', sans-serif;
+        }
+        .step-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px; font-weight: 700;
+            color: #f2e4c8;
+            margin-bottom: 24px;
+            line-height: 1.3;
+        }
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* ── CARDS ── */
+        .summary-card { background: #141f1c; border-radius: 14px; padding: 16px 18px; margin-bottom: 22px; border: 1px solid #2a4542; }
+        .summary-row { font-size: 14px; color: #e8e8e8; line-height: 1.7; }
+        .summary-label { font-weight: 600; color: #6fbfae; }
+
+        /* ── FIELDS ── */
+        .field-group { margin-bottom: 18px; }
+        .field-label { font-size: 11px; font-weight: 700; color: #6fbfae; margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+        .field-input {
+            width: 100%; padding: 14px 16px;
+            border: 1.5px solid #2a4542;
+            border-radius: 12px;
+            font-size: 15px; color: #e8e8e8;
+            outline: none;
+            transition: border-color 0.2s;
+            background: #141f1c;
+            -webkit-appearance: none;
+            font-family: 'Inter', sans-serif;
+        }
+        .field-input:focus { border-color: #6fbfae; }
+        .field-input::placeholder { color: #7a8f8c; }
+        .field-input.error { border-color: #E53E3E; }
+        textarea.field-input { resize: none; min-height: 100px; }
+
+        /* ── MONTH NAV ── */
+        .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .month-nav-btn { width: 40px; height: 40px; border: 1.5px solid #2a4542; border-radius: 10px; background: #141f1c; cursor: pointer; font-size: 20px; color: #e8e8e8; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s; }
+        .month-nav-btn:hover:not(:disabled) { border-color: #6fbfae; color: #6fbfae; }
+        .month-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .month-label { font-size: 16px; font-weight: 700; color: #6fbfae; font-family: 'Playfair Display', serif; }
+
+        /* ── CALENDAR ── */
+        .cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
+        .cal-dow-cell { text-align: center; font-size: 11px; font-weight: 700; color: #7a8f8c; padding: 4px 0; text-transform: uppercase; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 10px; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; color: #e8e8e8; }
+        .cal-day:hover:not(.disabled):not(.empty) { border-color: #6fbfae; color: #6fbfae; background: rgba(111,191,174,0.1); }
+        .cal-day.selected { background: #6fbfae !important; color: #0d1714 !important; border-color: #6fbfae !important; font-weight: 700; }
+        .cal-day.today:not(.selected) { border-color: #6fbfae; color: #6fbfae; font-weight: 700; }
+        .cal-day.disabled { color: #2a4542; cursor: not-allowed; }
+        .cal-day.empty { cursor: default; }
+        .cal-day.weekend { color: #2a4542; cursor: not-allowed; }
+
+        /* ── TIME SLOTS ── */
+        .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .week-nav-btn { width: 40px; height: 40px; border: 1.5px solid #2a4542; border-radius: 10px; background: #141f1c; cursor: pointer; font-size: 20px; color: #e8e8e8; display: flex; align-items: center; justify-content: center; }
+        .week-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .week-label { font-size: 15px; font-weight: 600; color: #6fbfae; }
+        .section-label { font-size: 11px; font-weight: 700; color: #6fbfae; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1.5px; }
+        .times-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .time-chip { padding: 14px 6px; border: 1.5px solid #2a4542; border-radius: 12px; background: #141f1c; text-align: center; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; color: #e8e8e8; font-family: 'Inter', sans-serif; }
+        .time-chip:hover:not(.busy) { border-color: #6fbfae; color: #6fbfae; }
+        .time-chip.selected { background: #6fbfae; border-color: #6fbfae; color: #0d1714; font-weight: 700; }
+        .time-chip.busy { opacity: 0.2; cursor: not-allowed; background: #141f1c; }
+        .loading { text-align: center; padding: 40px 20px; color: #7a8f8c; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #2a4542; border-top-color: #6fbfae; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .no-slots { text-align: center; padding: 32px 0; color: #7a8f8c; font-size: 14px; }
+
+        /* ── CONFIRM SCREEN ── */
+        .confirm-icon { width: 76px; height: 76px; border-radius: 50%; background: #6fbfae; display: flex; align-items: center; justify-content: center; margin: 8px auto 22px; font-size: 32px; color: #0d1714; }
+        .confirm-title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 6px; color: #f2e4c8; font-family: 'Playfair Display', serif; }
+        .confirm-subtitle { text-align: center; color: #7a8f8c; font-size: 13px; line-height: 1.6; margin-bottom: 28px; }
+        .confirm-details { background: #141f1c; border-radius: 16px; padding: 4px 18px; border: 1px solid #2a4542; }
+        .confirm-row { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid #2a4542; }
+        .confirm-row:last-child { border-bottom: none; }
+        .confirm-icon-sm { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+        .confirm-label { font-size: 11px; color: #7a8f8c; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .confirm-value { font-size: 14px; font-weight: 600; color: #e8e8e8; }
+
+        /* ── BOTTOM BAR ── */
+        .bottom-wrap { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; padding: 14px 20px 24px; background: #0d1714; border-top: 1px solid #2a4542; }
+        .btn-primary { width: 100%; padding: 17px; background: #6fbfae; color: #0d1714; border: none; border-radius: 50px; font-size: 16px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; font-family: 'Inter', sans-serif; letter-spacing: 0.3px; }
+        .btn-primary:disabled { background: #2a4542; color: #7a8f8c; cursor: not-allowed; }
+        .btn-primary:active:not(:disabled) { opacity: 0.85; }
+
+        /* ── VISIT TYPE CARDS ── */
+        .visit-type-cards { display: flex; flex-direction: column; gap: 12px; }
+        .visit-type-card { border: 1.5px solid #2a4542; border-radius: 14px; padding: 18px; cursor: pointer; transition: all 0.2s; background: #141f1c; }
+        .visit-type-card:hover { border-color: #6fbfae; }
+        .visit-type-card.selected { border-color: #6fbfae; background: rgba(111,191,174,0.07); }
+        .vt-title { font-size: 15px; font-weight: 700; color: #e8e8e8; margin-bottom: 6px; }
+        .visit-type-card.selected .vt-title { color: #6fbfae; }
+        .vt-desc { font-size: 13px; color: #7a8f8c; line-height: 1.6; }
+
+        /* ── INSPECTOR CARD ── */
+        .inspector-info-card { display: none; margin-top: 20px; border: 1.5px solid #6fbfae; border-radius: 14px; background: rgba(111,191,174,0.07); padding: 18px; }
+        .inspector-info-label { font-size: 11px; font-weight: 700; color: #6fbfae; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .inspector-info-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+        .inspector-avatar { width: 46px; height: 46px; border-radius: 50%; background: #6fbfae; display: flex; align-items: center; justify-content: center; color: #0d1714; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+        .inspector-info-name { font-size: 15px; font-weight: 700; color: #6fbfae; }
+        .inspector-info-role { font-size: 13px; color: #7a8f8c; margin-top: 2px; }
+        .inspector-info-msg { font-size: 13px; color: #9a9a9a; line-height: 1.6; margin-bottom: 12px; border-top: 1px solid #2a4542; padding-top: 12px; }
+        .inspector-info-contact { font-size: 13px; color: #e8e8e8; line-height: 1.8; display: flex; align-items: center; gap: 8px; }
+        .inspector-info-contact span { color: #7a8f8c; }
+
+        /* ── FIELD HINT ── */
+        .field-hint { font-size: 12px; color: #7a8f8c; margin-top: 6px; }
+    </style>
 </head>
 <body>
-<x-dc>
-<helmet>
-<link rel="stylesheet" href="_ds/yuca-design-system-019dfda8-7020-7e28-a0a7-ef3a1272a0bb/colors_and_type.css">
-<style>body{margin:0;background:#FBF2E7}a{color:#005956}a:hover{color:#098C7B}button{font-family:inherit;cursor:pointer}</style>
-</helmet>
-<div style="min-height:100vh;display:flex;justify-content:center;font-family:Montserrat,sans-serif;color:#062840;background:#FBF2E7">
-<div style="width:100%;max-width:480px;display:flex;flex-direction:column;min-height:100vh;background:#fff;box-shadow:0 8px 32px rgba(6,40,64,.08)">
 
-<header style="background:#005956;color:#fff;padding:20px 24px;display:flex;align-items:center;gap:14px">
-  <img src="uploads/logo_yuca_branca.png" alt="Yuca" height="44" style="height:44px;width:auto;display:block">
-  <div style="width:1px;height:32px;background:rgba(255,255,255,.3)"></div>
-  <div style="display:flex;flex-direction:column;gap:2px">
-    <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#C9E6CD">Agendamento de vistoria</span>
-    <span style="font-size:15px;font-weight:600">Unidade pronta para Gestão Yuca</span>
-  </div>
-</header>
+<!-- NETLIFY FORM DETECTION (hidden) -->
+<form name="agendamento-vistoria" netlify netlify-honeypot="bot-field" hidden>
+    <input name="bot-field">
+    <input name="ownerName"><input name="ownerPhone"><input name="ownerEmail">
+    <input name="buildingName"><input name="unitNumber"><input name="address">
+    <input name="accessInfo">
+    <input name="visitType"><input name="visitDate"><input name="visitTime">
+    <input name="inspector"><input name="notes">
+</form>
 
-<sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
-<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 12px 8px">
-  <button onClick="{{ back }}" style="display:flex;align-items:center;gap:4px;border:0;background:none;color:#005956;font-weight:600;font-size:14px;padding:8px 12px;border-radius:12px" style-hover="background:#f2fbf7">
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Voltar</button>
-  <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B">Etapa {{ step }} de 4</span>
-</div>
-<div style="height:4px;background:#e6eaed"><div style="height:100%;background:#12C68B;border-radius:0 4px 4px 0;transition:width .32s cubic-bezier(.16,1,.3,1);width:{{ progress }}"></div></div>
-</sc-if>
-
-<main style="flex:1;padding:28px 24px 24px;display:flex;flex-direction:column;gap:20px">
-
-<sc-if value="{{ s1 }}" hint-placeholder-val="{{ true }}">
-  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;letter-spacing:-.01em;color:#005956">Vamos agendar sua vistoria</h1>
-  <p style="margin:0;font-size:15px;line-height:1.55;color:#4a5d6c">Seus dados e os da unidade já estão com a gente. Falta só escolher o melhor dia e horário.</p>
-  <div style="border:1.5px solid #12C68B;background:#f2fbf7;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:6px">
-    <div style="font-weight:700;font-size:16px;color:#005956">Unidade pronta para Gestão Yuca</div>
-    <div style="font-size:14px;line-height:1.55">Sua unidade está pronta para ser locada. Faremos a vistoria de recebimento, as fotos da unidade para o site e as fotos das áreas comuns.</div>
-  </div>
-  <div style="background:#FBEACA;border-radius:16px;padding:16px 20px;font-size:14px;line-height:1.55"><strong>Você não precisa estar presente.</strong> O laudo será enviado para você assim que a vistoria for concluída.</div>
-  <div style="display:flex;flex-direction:column;gap:10px">
-    <label style="font-size:14px;font-weight:600">Você vai estar presente na vistoria? *</label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <button onClick="{{ presYes }}" style="{{ presYesStyle }}">Estarei presente</button>
-      <button onClick="{{ presNo }}" style="{{ presNoStyle }}">Não estarei presente</button>
+<div class="app">
+    <!-- Yuca Brand Header -->
+    <div class="yuca-header">
+        <div class="yuca-logo">
+            <div class="yuca-logomark">y</div>
+            <span class="yuca-brand">yuca</span>
+            <span class="yuca-sep">|</span>
+            <span class="yuca-subtitle">Agendamento de Vistoria</span>
+        </div>
     </div>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:8px">
-    <label style="font-size:14px;font-weight:600">Recado para o vistoriador <span style="font-weight:400;color:#6b7c8a">(opcional)</span></label>
-    <textarea placeholder="Ex: avisar a portaria, acesso pelo elevador social..." style="min-height:96px;border:1px solid #c5cdd3;border-radius:12px;padding:14px 16px;font:400 14px/1.5 Montserrat,sans-serif;color:#062840;resize:vertical;outline:none" style-focus="border-color:#12C68B;box-shadow:0 0 0 3px rgba(18,198,139,.2)"></textarea>
-  </div>
-</sc-if>
 
-<sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
-  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Escolha uma data</h1>
-  <div style="display:flex;align-items:center;justify-content:space-between">
-    <button onClick="{{ prevMonth }}" aria-label="Mês anterior" style="width:44px;height:44px;border-radius:12px;border:1px solid #dfe4e8;background:#fff;color:#062840;display:grid;place-items:center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <span style="font-family:Fraunces,serif;font-weight:700;font-size:20px;text-transform:capitalize">{{ monthLabel }}</span>
-    <button onClick="{{ nextMonth }}" aria-label="Próximo mês" style="width:44px;height:44px;border-radius:12px;border:1px solid #dfe4e8;background:#fff;color:#062840;display:grid;place-items:center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B">
-    <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div style="color:#b3bdc5">Sáb</div><div style="color:#b3bdc5">Dom</div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
-    <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
-      <button disabled="{{ c.off }}" onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.label }}</button>
-    </sc-for>
-  </div>
-  <div style="font-size:13px;color:#6b7c8a">Vistorias de segunda a sexta, com no mínimo 1 dia de antecedência.</div>
-</sc-if>
+    <!-- Nav -->
+    <div class="header">
+        <button class="header-btn" id="btnBack" onclick="goBack()">← Voltar</button>
+        <button class="header-btn" onclick="resetForm()">Fechar ×</button>
+    </div>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="content">
 
-<sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
-  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Escolha um horário</h1>
-  <div style="align-self:flex-start;background:#f2fbf7;border:1px solid #C9E6CD;color:#005956;font-weight:600;font-size:14px;padding:8px 16px;border-radius:999px;text-transform:capitalize">{{ dateLong }}</div>
-  <div>
-    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B">Horários disponíveis</div>
-    <p style="margin:6px 0 0;font-size:13px;color:#6b7c8a">Tempo médio de vistoria: <strong style="color:#062840">1h a 1h30</strong></p>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-    <sc-for list="{{ times }}" as="t" hint-placeholder-count="8">
-      <button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
-    </sc-for>
-  </div>
-</sc-if>
+        <!-- Step 1: Owner -->
+        <div class="step active" id="step-1">
+            <span class="step-num">01</span>
+            <h2 class="step-title">Dados do proprietário</h2>
+            <div class="field-group">
+                <label class="field-label">Nome completo *</label>
+                <input class="field-input" id="ownerName" type="text" placeholder="Seu nome completo" autocomplete="name">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Telefone / WhatsApp *</label>
+                <input class="field-input" id="ownerPhone" type="tel" placeholder="(11) 99999-9999" autocomplete="tel">
+            </div>
+            <div class="field-group">
+                <label class="field-label">E-mail *</label>
+                <input class="field-input" id="ownerEmail" type="email" placeholder="seu@email.com" autocomplete="email">
+            </div>
+        </div>
 
-<sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
-  <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Revise seu agendamento</h1>
-  <div style="border:1px solid #e6eaed;border-radius:16px;box-shadow:0 2px 8px rgba(6,40,54,.06);overflow:hidden">
-    <sc-for list="{{ review }}" as="r" hint-placeholder-count="4">
-      <div style="display:flex;justify-content:space-between;gap:16px;padding:16px 24px;border-top:{{ r.border }}">
-        <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#098C7B;padding-top:2px">{{ r.k }}</span>
-        <span style="font-size:15px;font-weight:600;text-align:right;text-transform:capitalize">{{ r.v }}</span>
-      </div>
-    </sc-for>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
-    <button onClick="{{ confirm }}" style="height:52px;border:0;border-radius:12px;background:#12C68B;color:#062840;font-weight:700;font-size:16px" style-hover="background:#0fb27b">Confirmar agendamento</button>
-    <button onClick="{{ edit }}" style="height:52px;border:1.5px solid #005956;border-radius:12px;background:#fff;color:#005956;font-weight:700;font-size:16px" style-hover="background:#f2fbf7">Editar agendamento</button>
-  </div>
-</sc-if>
+        <!-- Step 2: Details + auto-inspector card -->
+        <div class="step" id="step-2">
+            <span class="step-num">02</span>
+            <h2 class="step-title">Detalhes da vistoria</h2>
 
-<sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
-  <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding-top:24px">
-    <div style="width:72px;height:72px;border-radius:50%;background:#12C68B;display:grid;place-items:center"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-    <h1 style="margin:0;font-family:Fraunces,serif;font-weight:700;font-size:34px;line-height:1.1;color:#005956">Agendamento concluído</h1>
-    <p style="margin:0;font-size:15px;line-height:1.55;color:#4a5d6c">Vistoria marcada para <strong style="color:#062840;text-transform:capitalize">{{ dateLong }}, às {{ time }}</strong>. Enviaremos o laudo assim que ela for concluída.</p>
-  </div>
-  <div style="background:#FBEACA;border-radius:16px;padding:16px 20px;font-size:14px;line-height:1.55">Dúvidas? Chame a equipe Yuca no WhatsApp: <a href="#">Falar com a Yuca</a></div>
-</sc-if>
+            <!-- Tipo único — selecionado automaticamente -->
+            <div class="visit-type-card selected" style="cursor:default; margin-bottom:20px;">
+                <div class="vt-title" style="color:#6fbfae;">Unidade pronta para Gestão Yuca</div>
+                <div class="vt-desc">Sua unidade está pronta para ser locada. Será realizada vistoria de recebimento, fotos da unidade para o site e fotos das áreas comuns.</div>
+            </div>
 
-</main>
+            <!-- Inspector info card — aparece automaticamente -->
+            <div class="inspector-info-card" id="inspectorInfoCard">
+                <!-- filled dynamically -->
+            </div>
 
-<sc-if value="{{ showNext }}" hint-placeholder-val="{{ true }}">
-<div style="position:sticky;bottom:0;padding:16px 24px 24px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid #e6eaed">
-  <button onClick="{{ next }}" style="{{ nextStyle }}">Próximo</button>
+            <!-- Presença -->
+            <div style="margin-top:20px;">
+                <div style="background:rgba(111,191,174,0.08); border-left:4px solid #6fbfae; border-radius:8px; padding:12px 16px; font-size:13px; color:#6fbfae; line-height:1.6; margin-bottom:16px;">
+                    ✅ <strong>Não precisa estar presente</strong> — o laudo será enviado para você em breve.
+                </div>
+                <label class="field-label">Mas caso esteja presente:</label>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <div id="pres-yes" onclick="selectPresence('yes')" style="flex:1; padding:14px 8px; border:1.5px solid #2a4542; border-radius:12px; text-align:center; cursor:pointer; font-size:14px; font-weight:500; transition:all 0.2s; color:#e8e8e8; background:#141f1c;">
+                        ✋ Estarei presente
+                    </div>
+                    <div id="pres-no" onclick="selectPresence('no')" style="flex:1; padding:14px 8px; border:1.5px solid #2a4542; border-radius:12px; text-align:center; cursor:pointer; font-size:14px; font-weight:500; transition:all 0.2s; color:#e8e8e8; background:#141f1c;">
+                        🏠 Não estarei presente
+                    </div>
+                </div>
+            </div>
+
+            <div class="field-group" style="margin-top:16px;">
+                <label class="field-label">Observações adicionais <span style="font-weight:400;color:#7a8f8c;">(opcional)</span></label>
+                <textarea class="field-input" id="notes"
+                    placeholder="Ex: Portaria precisa ser avisada, acesso pelo elevador social..."></textarea>
+            </div>
+        </div>
+
+        <!-- Step 3: Property -->
+        <div class="step" id="step-3">
+            <span class="step-num">03</span>
+            <h2 class="step-title">Dados do imóvel</h2>
+            <div class="field-group">
+                <label class="field-label">Nome do edifício *</label>
+                <input class="field-input" id="buildingName" type="text" placeholder="Ex: Edifício Solar">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Unidade / Apartamento / Quarto *</label>
+                <input class="field-input" id="unitNumber" type="text" placeholder="Ex: Apto 42 ou Quarto 3B">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Endereço de entrada da unidade *</label>
+                <input class="field-input" id="address" type="text" placeholder="Rua, número, bairro, cidade">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Senha e liberação da unidade *</label>
+                <input class="field-input" id="accessInfo" type="text" placeholder="Ex: Código da porta: 1234 / Chave com o zelador">
+                <p class="field-hint">Informe como o vistoriador poderá acessar o imóvel no dia agendado.</p>
+            </div>
+        </div>
+
+        <!-- Step 4: Date (month view) -->
+        <div class="step" id="step-4">
+            <span class="step-num">04</span>
+            <h2 class="step-title" style="margin-bottom:16px;">Escolha uma data</h2>
+            <div class="summary-card" id="summaryCard"></div>
+            <div class="month-nav">
+                <button class="month-nav-btn" id="btnPrevMonth" onclick="changeMonth(-1)">&#8249;</button>
+                <span class="month-label" id="monthLabel"></span>
+                <button class="month-nav-btn" id="btnNextMonth" onclick="changeMonth(1)">&#8250;</button>
+            </div>
+            <div class="cal-dow">
+                <div class="cal-dow-cell">Seg</div>
+                <div class="cal-dow-cell">Ter</div>
+                <div class="cal-dow-cell">Qua</div>
+                <div class="cal-dow-cell">Qui</div>
+                <div class="cal-dow-cell">Sex</div>
+                <div class="cal-dow-cell" style="color:#2a4542;">Sáb</div>
+                <div class="cal-dow-cell" style="color:#2a4542;">Dom</div>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+        </div>
+
+        <!-- Step 5: Time -->
+        <div class="step" id="step-5">
+            <span class="step-num">05</span>
+            <h2 class="step-title" style="margin-bottom:16px;">Escolha um horário</h2>
+            <div class="summary-card" id="summaryCard6"></div>
+            <div class="week-nav">
+                <button class="week-nav-btn" disabled>&#8249;</button>
+                <span class="week-label" id="selectedDateLabel"></span>
+                <button class="week-nav-btn" disabled>&#8250;</button>
+            </div>
+            <div class="section-label">Horários disponíveis:</div>
+            <div style="font-size:12px; color:#7a8f8c; margin-bottom:14px; line-height:1.5;">⏱ Tempo médio de vistoria: <strong style="color:#e8e8e8;">1h a 1h30</strong></div>
+            <div id="timesContainer">
+                <div class="loading"><div class="spinner"></div>Verificando disponibilidade...</div>
+            </div>
+        </div>
+
+        <!-- Step 6: Revisão -->
+        <div class="step" id="step-6">
+            <span class="step-num">06</span>
+            <h2 class="step-title">Revise seu agendamento</h2>
+            <div class="confirm-details" id="reviewDetails"></div>
+            <div style="margin-top:24px; display:flex; flex-direction:column; gap:12px; padding-bottom:20px;">
+                <button id="btnConfirm" onclick="confirmAgendamento()" style="width:100%; padding:17px; background:#6fbfae; color:#0d1714; border:none; border-radius:50px; font-size:16px; font-weight:700; cursor:pointer; transition:opacity 0.2s; font-family:'Inter',sans-serif;">
+                    ✓ Tudo pronto!
+                </button>
+                <button onclick="editAgendamento()" style="width:100%; padding:17px; background:#141f1c; color:#6fbfae; border:1.5px solid #6fbfae; border-radius:50px; font-size:16px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;">
+                    ✏️ Editar agendamento
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 7: Liberação -->
+        <div class="step" id="step-7">
+            <div class="confirm-icon">&#10003;</div>
+            <h2 class="confirm-title">Agendamento concluído!</h2>
+            <p class="confirm-subtitle">Olá! Seu agendamento está concluído. Você precisa liberar a vistoriadora. Segue os dados:</p>
+
+            <div style="background:rgba(111,191,174,0.08); border:1.5px solid #6fbfae; border-radius:16px; padding:20px 18px; margin-bottom:16px;">
+                <div style="font-size:11px; font-weight:700; color:#6fbfae; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">📋 Dados da vistoriadora</div>
+                <div style="font-size:15px; font-weight:700; color:#f2e4c8; margin-bottom:14px; font-family:'Playfair Display',serif;">Ariene Saldanha Rosa</div>
+                <div style="font-size:14px; color:#e8e8e8; line-height:2.2;">
+                    <div><strong style="color:#6fbfae;">RG:</strong> 39.757.431-9</div>
+                    <div><strong style="color:#6fbfae;">CPF:</strong> 480.999.318-31</div>
+                    <div><strong style="color:#6fbfae;">Data de nascimento:</strong> 22/04/1997</div>
+                    <div><strong style="color:#6fbfae;">Telefone:</strong> (11) 91325-1682</div>
+                </div>
+            </div>
+
+            <div style="background:rgba(245,166,35,0.1); border-left:4px solid #F5A623; border-radius:12px; padding:14px 16px; font-size:13px; color:#c9a558; line-height:1.7; margin-bottom:28px;">
+                💬 Caso tenha dúvidas ou precise de mais alguma informação, chame a <strong>Mai</strong> no WhatsApp: <strong>(11) 98933-0167</strong>
+            </div>
+
+            <button onclick="resetForm()" style="width:100%; padding:17px; background:#6fbfae; color:#0d1714; border:none; border-radius:50px; font-size:16px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;">
+                Novo agendamento
+            </button>
+        </div>
+
+    </div>
+    <div class="bottom-wrap">
+        <button class="btn-primary" id="btnNext" onclick="goNext()">Próximo</button>
+    </div>
 </div>
-</sc-if>
 
-</div>
+<!-- Overlay: Editar agendamento -->
+<div id="editOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:999; align-items:flex-end; justify-content:center;">
+    <div style="background:#141f1c; border-radius:20px 20px 0 0; padding:24px 20px 36px; width:100%; max-width:480px; border-top:1px solid #2a4542;">
+        <div style="font-size:16px; font-weight:700; color:#f2e4c8; margin-bottom:20px; font-family:'Playfair Display',serif;">O que deseja editar?</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button onclick="goToEdit(1)" style="text-align:left; padding:16px 18px; border:1.5px solid #2a4542; border-radius:12px; background:#1a2e2b; font-size:14px; font-weight:500; cursor:pointer; color:#e8e8e8; font-family:'Inter',sans-serif;">👤 Dados do proprietário</button>
+            <button onclick="goToEdit(2)" style="text-align:left; padding:16px 18px; border:1.5px solid #2a4542; border-radius:12px; background:#1a2e2b; font-size:14px; font-weight:500; cursor:pointer; color:#e8e8e8; font-family:'Inter',sans-serif;">📋 Detalhes da vistoria</button>
+            <button onclick="goToEdit(3)" style="text-align:left; padding:16px 18px; border:1.5px solid #2a4542; border-radius:12px; background:#1a2e2b; font-size:14px; font-weight:500; cursor:pointer; color:#e8e8e8; font-family:'Inter',sans-serif;">🏢 Dados do imóvel</button>
+            <button onclick="goToEdit(4)" style="text-align:left; padding:16px 18px; border:1.5px solid #2a4542; border-radius:12px; background:#1a2e2b; font-size:14px; font-weight:500; cursor:pointer; color:#e8e8e8; font-family:'Inter',sans-serif;">📅 Data</button>
+            <button onclick="goToEdit(5)" style="text-align:left; padding:16px 18px; border:1.5px solid #2a4542; border-radius:12px; background:#1a2e2b; font-size:14px; font-weight:500; cursor:pointer; color:#e8e8e8; font-family:'Inter',sans-serif;">🕐 Horário</button>
+        </div>
+        <button onclick="document.getElementById('editOverlay').style.display='none'" style="width:100%; margin-top:16px; padding:14px; background:#2a4542; border:none; border-radius:12px; font-size:14px; color:#9a9a9a; cursor:pointer; font-weight:500; font-family:'Inter',sans-serif;">Cancelar</button>
+    </div>
 </div>
 
-</x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  state = { step: 1, pres: null, month: new Date(2026, 9, 1), date: null, time: null };
-  renderVals() {
-    const { step, pres, month, date, time } = this.state;
-    const set = (o) => this.setState(o);
-    const today = new Date(2026, 9, 20);
-    const btn = (on) => 'height:56px;border-radius:12px;font:600 14px Montserrat,sans-serif;transition:all .2s;border:1.5px solid ' + (on ? '#12C68B;background:#f2fbf7;color:#005956' : '#c5cdd3;background:#fff;color:#062840');
-    const first = new Date(month.getFullYear(), month.getMonth(), 1);
-    const lead = (first.getDay() + 6) % 7;
-    const dim = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-    const cells = [];
-    for (let i = 0; i < lead; i++) cells.push({ label: '', off: true, style: 'height:44px;border:0;background:none', pick: () => {} });
-    for (let d = 1; d <= dim; d++) {
-      const dt = new Date(month.getFullYear(), month.getMonth(), d);
-      const off = dt.getDay() === 0 || dt.getDay() === 6 || dt <= today;
-      const sel = date && date.getTime() === dt.getTime();
-      cells.push({ label: d, off, pick: () => set({ date: dt, time: null, step: 3 }),
-        style: 'height:44px;border-radius:12px;font:600 14px Montserrat,sans-serif;border:0;' + (sel ? 'background:#005956;color:#fff' : off ? 'background:none;color:#c5cdd3;cursor:default' : 'background:#f2fbf7;color:#005956') });
+<script>
+/* ── CONFIG ──────────────────────────────────────────────── */
+const CONFIG = {
+    inspectors: [
+        {
+            name: 'Ariene Saldanha Rosa',
+            initials: 'AS',
+            role: 'Vistoriadora/Fotógrafa',
+            email: 'asaldanharosa@gmail.com',
+            phone: '',   // adicione o telefone aqui se desejar
+            rg: '39.757.431-9',
+            cpf: '480.999.318-31',
+            dob: '22/04/1997',
+        },
+        {
+            name: 'Vistoriador',
+            initials: 'VT',
+            role: 'Vistoriador/Fotógrafo',
+            email: 'maiarapm154@gmail.com',
+            phone: '',   // adicione o telefone aqui se desejar
+        },
+    ],
+    workingDays: [1,2,3,4,5],
+    workingHours: { start: 9, end: 17 },
+    slotDuration: 60,
+    minAdvanceDays: 1,
+    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbwlC-Lqw4EZ8ekGuqdI7awLJzg2-qJbSLjinZM29vrvrCf7lNkz30aYqo0y_M7KFQGn/exec',
+    googleCalendar: {
+        enabled: false,
+        calendarId: 'SEU_CALENDAR_ID@group.calendar.google.com',
+        apiKey: 'SUA_API_KEY',
+    },
+};
+
+/* ── STATE ───────────────────────────────────────────────── */
+let S = {
+    step:1, totalSteps:7,
+    selectedInspector: null,
+    ownerName:'', ownerPhone:'', ownerEmail:'',
+    buildingName:'', unitNumber:'', address:'', accessInfo:'',
+    visitType:'', notes:'', presence:'',
+    selectedDate:null, selectedTime:null,
+    monthOffset:0, busyTimes:[],
+};
+
+const BTN = ['Próximo','Próximo','Próximo','Próximo','Revisar agendamento','',''];
+const MO  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MOL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const MOS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const DNL = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+
+document.addEventListener('DOMContentLoaded', () => { renderProgress(); renderMonth(); updateBtn(); });
+
+/* ── VISIT TYPE + AUTO INSPECTOR ─────────────────────────── */
+function selectVisitType(value, cardId, inspectorIdx) {
+    S.visitType = value;
+    S.selectedInspector = CONFIG.inspectors[inspectorIdx];
+    renderInspectorInfoCard();
+    updateBtn();
+}
+
+function selectPresence(val) {
+    S.presence = val;
+    const yes = document.getElementById('pres-yes');
+    const no  = document.getElementById('pres-no');
+    [yes, no].forEach(b => { b.style.borderColor='#2a4542'; b.style.background='#141f1c'; b.style.color='#e8e8e8'; });
+    const active = val === 'yes' ? yes : no;
+    active.style.borderColor = '#6fbfae';
+    active.style.background  = 'rgba(111,191,174,0.1)';
+    active.style.color       = '#6fbfae';
+}
+
+function renderInspectorInfoCard() {
+    const insp = S.selectedInspector;
+    const card = document.getElementById('inspectorInfoCard');
+    if (!insp) { card.style.display = 'none'; return; }
+
+    const contactLines = [];
+    if (insp.email) contactLines.push(`<div class="inspector-info-contact">📧 <span>${insp.email}</span></div>`);
+    if (insp.phone) contactLines.push(`<div class="inspector-info-contact">📞 <span>${insp.phone}</span></div>`);
+
+    card.innerHTML = `
+        <div class="inspector-info-label">Seu vistoriador(a)</div>
+        <div class="inspector-info-row">
+            <div class="inspector-avatar">${insp.initials}</div>
+            <div>
+                <div class="inspector-info-name">${insp.name}</div>
+                <div class="inspector-info-role">${insp.role}</div>
+            </div>
+        </div>
+        <p class="inspector-info-msg">Esse será seu vistoriador(a). Segue os dados para liberação e contato caso necessário.</p>
+        ${contactLines.join('')}
+    `;
+    card.style.display = 'block';
+}
+
+/* ── NAVIGATION ──────────────────────────────────────────── */
+async function goNext() {
+    if (S.step === S.totalSteps) { resetForm(); return; }
+    if (!validate(S.step)) return;
+    const next = S.step + 1;
+    if (next===4) { renderSum('summaryCard'); renderMonth(); }
+    if (next===5) { renderSum('summaryCard6'); await loadSlots(); updateDateLabel(); }
+    if (next===6) { renderReview(); }
+    goTo(next);
+}
+function goBack() { if (S.step>1) goTo(S.step-1); }
+function goTo(n) {
+    document.getElementById('step-'+S.step).classList.remove('active');
+    S.step = n;
+    document.getElementById('step-'+n).classList.add('active');
+    renderProgress(); updateBtn(); window.scrollTo(0,0);
+    if (n === 2) selectVisitType('Unidade pronta para Gestão Yuca', null, 0);
+    document.querySelector('.bottom-wrap').style.display = (n >= 6) ? 'none' : '';
+}
+function resetForm() {
+    S = { step:1, totalSteps:7, selectedInspector:null, ownerName:'', ownerPhone:'', ownerEmail:'', buildingName:'', unitNumber:'', address:'', accessInfo:'', visitType:'', notes:'', presence:'', selectedDate:null, selectedTime:null, monthOffset:0, busyTimes:[] };
+    ['ownerName','ownerPhone','ownerEmail','buildingName','unitNumber','address','accessInfo','notes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    ['pres-yes','pres-no'].forEach(id => { const b=document.getElementById(id); if(b){ b.style.borderColor='#2a4542'; b.style.background='#141f1c'; b.style.color='#e8e8e8'; } });
+    const ic = document.getElementById('inspectorInfoCard');
+    if (ic) ic.style.display = 'none';
+    goTo(1);
+}
+
+/* ── VALIDATION ──────────────────────────────────────────── */
+function validate(step) {
+    if (step===1) {
+        const n=v('ownerName'),p=v('ownerPhone'),e=v('ownerEmail');
+        if(!n){shake('ownerName','Informe seu nome');return false;}
+        if(!p){shake('ownerPhone','Informe seu telefone');return false;}
+        if(!e||!e.includes('@')){shake('ownerEmail','E-mail inválido');return false;}
+        S.ownerName=n; S.ownerPhone=p; S.ownerEmail=e;
     }
-    const times = ['08:00','09:00','10:00','11:00','13:00','14:00','15:00','16:00'].map(t => ({ label: t, pick: () => set({ time: t }),
-      style: 'height:48px;border-radius:12px;font:600 15px Montserrat,sans-serif;border:1.5px solid ' + (time === t ? '#005956;background:#005956;color:#fff' : '#c5cdd3;background:#fff;color:#062840') }));
-    const dateLong = date ? date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
-    const rows = [['Vistoria', 'Recebimento da unidade'], ['Presença', pres === 'yes' ? 'Estarei presente' : 'Não estarei presente'], ['Data', dateLong], ['Horário', time || '']];
-    const ok = (step === 1 && pres) || step === 2 && false;
-    const canNext = step === 1 ? !!pres : false;
-    return {
-      step, s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4, s5: step === 5,
-      showNav: step > 0 && step < 5, showNext: step === 1 || (step === 3 && !!time),
-      progress: (step * 25) + '%',
-      back: () => set({ step: Math.max(1, step - 1) }),
-      presYes: () => set({ pres: 'yes' }), presNo: () => set({ pres: 'no' }),
-      presYesStyle: btn(pres === 'yes'), presNoStyle: btn(pres === 'no'),
-      next: () => { if (step === 1 && pres) set({ step: 2 }); else if (step === 3 && time) set({ step: 4 }); },
-      nextStyle: 'width:100%;height:52px;border:0;border-radius:12px;font:700 16px Montserrat,sans-serif;transition:all .2s;' + ((step === 1 && !pres) ? 'background:#e6eaed;color:#8a97a2' : 'background:#12C68B;color:#062840'),
-      monthLabel: month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
-      prevMonth: () => set({ month: new Date(month.getFullYear(), month.getMonth() - 1, 1) }),
-      nextMonth: () => set({ month: new Date(month.getFullYear(), month.getMonth() + 1, 1) }),
-      cells, times, dateLong, time,
-      review: rows.map((r, i) => ({ k: r[0], v: r[1], border: i ? '1px solid #e6eaed' : '0' })),
-      confirm: () => set({ step: 5 }),
-      edit: () => set({ step: 1 })
+    if (step===2) {
+        const presText = S.presence === 'yes' ? 'Proprietário estará presente.' : S.presence === 'no' ? 'Proprietário não estará presente.' : '';
+        const notesRaw = v('notes');
+        S.notes = [presText, notesRaw].filter(Boolean).join(' | ');
+    }
+    if (step===3) {
+        const b=v('buildingName'),u=v('unitNumber'),a=v('address'),ac=v('accessInfo');
+        if(!b){shake('buildingName','Informe o edifício');return false;}
+        if(!u){shake('unitNumber','Informe a unidade');return false;}
+        if(!a){shake('address','Informe o endereço');return false;}
+        if(!ac){shake('accessInfo','Informe como acessar a unidade');return false;}
+        S.buildingName=b; S.unitNumber=u; S.address=a; S.accessInfo=ac;
+    }
+    if (step===4&&!S.selectedDate){toast('Selecione uma data.');return false;}
+    if (step===5&&!S.selectedTime){toast('Selecione um horário.');return false;}
+    return true;
+}
+function v(id){ return (document.getElementById(id)?.value||'').trim(); }
+function shake(id, msg) {
+    const el=document.getElementById(id);
+    if(el){ el.classList.add('error'); el.focus(); setTimeout(()=>el.classList.remove('error'),2000); }
+    toast(msg);
+}
+function toast(msg) {
+    const t=document.createElement('div');
+    t.textContent=msg;
+    t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a2e2b;color:#e8e8e8;padding:10px 20px;border-radius:24px;font-size:13px;z-index:999;pointer-events:none;white-space:nowrap;border:1px solid #2a4542;';
+    document.body.appendChild(t); setTimeout(()=>t.remove(),2200);
+}
+
+/* ── PROGRESS ────────────────────────────────────────────── */
+function renderProgress() {
+    document.getElementById('progressBar').innerHTML =
+        Array.from({length:S.totalSteps},(_,i)=>`<div class="progress-step ${i<S.step?'done':''}"></div>`).join('');
+    document.getElementById('btnBack').style.visibility = S.step===1?'hidden':'visible';
+}
+function updateBtn() {
+    const btn=document.getElementById('btnNext');
+    btn.textContent = BTN[S.step-1]||'Próximo';
+    btn.disabled = (S.step===4&&!S.selectedDate)||(S.step===5&&!S.selectedTime);
+}
+
+/* ── MONTH CALENDAR ──────────────────────────────────────── */
+function changeMonth(dir) {
+    const next=S.monthOffset+dir;
+    if(next<0) return;
+    S.monthOffset=next; S.selectedDate=null; updateBtn(); renderMonth();
+}
+function renderMonth() {
+    const now=new Date();
+    const target=new Date(now.getFullYear(), now.getMonth()+S.monthOffset, 1);
+    const year=target.getFullYear(), month=target.getMonth();
+
+    const ml=document.getElementById('monthLabel');
+    if(ml) ml.textContent=MO[month]+' '+year;
+
+    const bp=document.getElementById('btnPrevMonth');
+    if(bp) bp.disabled=S.monthOffset<=0;
+
+    const today=new Date(); today.setHours(0,0,0,0);
+    const minDate=new Date(today); minDate.setDate(today.getDate()+CONFIG.minAdvanceDays);
+
+    const firstDay=new Date(year,month,1);
+    const lastDay=new Date(year,month+1,0);
+
+    let startDow=firstDay.getDay();
+    if(startDow===0) startDow=7;
+    const offset=startDow-1;
+
+    const grid=document.getElementById('calGrid');
+    if(!grid) return;
+    grid.innerHTML='';
+
+    for(let i=0;i<offset;i++){
+        const e=document.createElement('div');
+        e.className='cal-day empty'; grid.appendChild(e);
+    }
+
+    for(let day=1;day<=lastDay.getDate();day++){
+        const date=new Date(year,month,day);
+        const dow=date.getDay();
+        const isWorkingDay=CONFIG.workingDays.includes(dow);
+        const isPast=date<minDate;
+        const isSelected=S.selectedDate&&date.toDateString()===S.selectedDate.toDateString();
+        const isToday=date.toDateString()===today.toDateString();
+        const isWeekend=dow===0||dow===6;
+
+        const cell=document.createElement('div');
+        let cls='cal-day';
+        if(isSelected) cls+=' selected';
+        else if(isToday&&isWorkingDay&&!isPast) cls+=' today';
+        if(!isWorkingDay||isPast) cls+=' disabled';
+        if(isWeekend) cls+=' weekend';
+        cell.className=cls;
+        cell.textContent=day;
+
+        if(isWorkingDay&&!isPast){
+            const iso=date.toISOString();
+            cell.onclick=()=>selectDate(iso);
+        }
+        grid.appendChild(cell);
+    }
+}
+function selectDate(iso){
+    S.selectedDate=new Date(iso); S.selectedTime=null; renderMonth(); updateBtn();
+}
+
+/* ── TIME SLOTS ──────────────────────────────────────────── */
+function updateDateLabel() {
+    const d=S.selectedDate; if(!d) return;
+    const el=document.getElementById('selectedDateLabel');
+    if(el) el.textContent=DNL[d.getDay()]+', '+d.getDate()+' de '+MOS[d.getMonth()];
+}
+async function loadSlots() {
+    const c=document.getElementById('timesContainer');
+    c.innerHTML='<div class="loading"><div class="spinner"></div>Verificando disponibilidade...</div>';
+    S.busyTimes=[];
+    if(CONFIG.appsScriptUrl){ try{await fetchBusy();}catch(e){console.warn('Busy fetch error:',e);} }
+    renderSlots();
+}
+async function fetchBusy() {
+    const d=S.selectedDate;
+    const pad=n=>String(n).padStart(2,'0');
+    const dateISO=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const res=await fetch(`${CONFIG.appsScriptUrl}?date=${dateISO}`);
+    const data=await res.json();
+    S.busyTimes=data.busy||[];
+}
+function isBusy(h,m) {
+    const d=S.selectedDate;
+    const s=new Date(d); s.setHours(h,m,0,0);
+    const e=new Date(s); e.setMinutes(s.getMinutes()+CONFIG.slotDuration);
+    return S.busyTimes.some(b=>{ const bs=new Date(b.start),be=new Date(b.end); return s<be&&e>bs; });
+}
+function renderSlots() {
+    const c=document.getElementById('timesContainer');
+    const {start,end}=CONFIG.workingHours;
+    const slots=[];
+    for(let h=start;h<end;h++) for(let m=0;m<60;m+=CONFIG.slotDuration) slots.push({h,m});
+    if(!slots.some(({h,m})=>!isBusy(h,m))){
+        c.innerHTML='<div class="no-slots">Todos os horários estão ocupados.<br>Por favor, escolha outra data.</div>'; return;
+    }
+    c.innerHTML='<div class="times-grid">'+slots.map(({h,m})=>{
+        const t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+        const busy=isBusy(h,m),sel=S.selectedTime===t;
+        return `<div class="time-chip${busy?' busy':''}${sel?' selected':''}"${!busy?` onclick="selectTime('${t}')"`:''}>${t}</div>`;
+    }).join('')+'</div>';
+}
+function selectTime(t){ S.selectedTime=t; renderSlots(); updateBtn(); }
+
+/* ── SUMMARY ─────────────────────────────────────────────── */
+function renderSum(id) {
+    const el=document.getElementById(id); if(!el) return;
+    const insp = S.selectedInspector;
+    el.innerHTML=`
+        <div class="summary-row"><span class="summary-label">Proprietário:</span> ${S.ownerName}</div>
+        <div class="summary-row"><span class="summary-label">Unidade:</span> ${S.buildingName} — ${S.unitNumber}</div>
+        <div class="summary-row"><span class="summary-label">Tipo:</span> ${S.visitType}</div>
+        ${insp ? `<div class="summary-row"><span class="summary-label">Vistoriador/a:</span> ${insp.name}</div>` : ''}
+    `;
+}
+
+/* ── REVIEW ──────────────────────────────────────────────── */
+function renderReview() {
+    const d = S.selectedDate;
+    const insp = S.selectedInspector || CONFIG.inspectors[0];
+    document.getElementById('reviewDetails').innerHTML = `
+        <div class="confirm-row"><div class="confirm-icon-sm">👤</div><div><div class="confirm-label">Proprietário</div><div class="confirm-value">${S.ownerName}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">📱</div><div><div class="confirm-label">Telefone</div><div class="confirm-value">${S.ownerPhone}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">📅</div><div><div class="confirm-label">Data</div><div class="confirm-value">${DNL[d.getDay()]}, ${d.getDate()} de ${MOL[d.getMonth()]} de ${d.getFullYear()}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">🕐</div><div><div class="confirm-label">Horário</div><div class="confirm-value">${S.selectedTime}h</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">🏢</div><div><div class="confirm-label">Imóvel</div><div class="confirm-value">${S.buildingName} — ${S.unitNumber}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">🔑</div><div><div class="confirm-label">Acesso</div><div class="confirm-value">${S.accessInfo}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">👷</div><div><div class="confirm-label">Vistoriador/a</div><div class="confirm-value">${insp.name}</div></div></div>
+        ${S.notes ? `<div class="confirm-row"><div class="confirm-icon-sm">📝</div><div><div class="confirm-label">Observações</div><div class="confirm-value">${S.notes}</div></div></div>` : ''}
+    `;
+}
+
+async function confirmAgendamento() {
+    const btn = document.getElementById('btnConfirm');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    await submit();
+    goTo(7);
+}
+
+function editAgendamento() {
+    document.getElementById('editOverlay').style.display = 'flex';
+}
+
+function goToEdit(step) {
+    document.getElementById('editOverlay').style.display = 'none';
+    goTo(step);
+}
+
+/* ── CONFIRM ─────────────────────────────────────────────── */
+function renderConfirm() {
+    const d=S.selectedDate;
+    const insp = S.selectedInspector || CONFIG.inspectors[0];
+    document.getElementById('confirmDetails').innerHTML=`
+        <div class="confirm-row"><div class="confirm-icon-sm">📅</div><div><div class="confirm-label">Data</div><div class="confirm-value">${DNL[d.getDay()]}, ${d.getDate()} de ${MOL[d.getMonth()]} de ${d.getFullYear()}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">🕐</div><div><div class="confirm-label">Horário</div><div class="confirm-value">${S.selectedTime}h</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">🏢</div><div><div class="confirm-label">Imóvel</div><div class="confirm-value">${S.buildingName} — ${S.unitNumber}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">📍</div><div><div class="confirm-label">Endereço</div><div class="confirm-value">${S.address}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">🔑</div><div><div class="confirm-label">Acesso à unidade</div><div class="confirm-value">${S.accessInfo}</div></div></div>
+        <div class="confirm-row"><div class="confirm-icon-sm">👤</div><div><div class="confirm-label">Vistoriador/a</div><div class="confirm-value">${insp.name}</div></div></div>
+        ${S.visitType?`<div class="confirm-row"><div class="confirm-icon-sm">📋</div><div><div class="confirm-label">Tipo</div><div class="confirm-value">${S.visitType}</div></div></div>`:''}
+    `;
+
+    // Dados para liberação na portaria
+    const docsEl = document.getElementById('inspectorDocs');
+    const docsContent = document.getElementById('inspectorDocsContent');
+    if (insp.rg || insp.cpf || insp.dob) {
+        const rows = [];
+        if (insp.rg)  rows.push(`<div style="font-size:13px; color:#e8e8e8; line-height:2;"><strong style="color:#6fbfae;">RG:</strong> ${insp.rg}</div>`);
+        if (insp.cpf) rows.push(`<div style="font-size:13px; color:#e8e8e8; line-height:2;"><strong style="color:#6fbfae;">CPF:</strong> ${insp.cpf}</div>`);
+        if (insp.dob) rows.push(`<div style="font-size:13px; color:#e8e8e8; line-height:2;"><strong style="color:#6fbfae;">Data de nascimento:</strong> ${insp.dob}</div>`);
+        docsContent.innerHTML = rows.join('');
+        docsEl.style.display = 'block';
+    } else {
+        docsEl.style.display = 'none';
+    }
+}
+
+/* ── SUBMIT ──────────────────────────────────────────────── */
+async function submit() {
+    // Bloqueia o botão para evitar duplo envio
+    const btn = document.querySelector('.btn-primary');
+    if(btn){ btn.disabled=true; btn.textContent='Enviando...'; }
+
+    const d=S.selectedDate;
+    const pad=n=>String(n).padStart(2,'0');
+    const dateISO=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const dateStr=DNL[d.getDay()]+', '+d.getDate()+' de '+MOL[d.getMonth()]+' de '+d.getFullYear();
+    const insp = S.selectedInspector || CONFIG.inspectors[0];
+
+    const payload = {
+        ownerName:S.ownerName, ownerPhone:S.ownerPhone, ownerEmail:S.ownerEmail,
+        buildingName:S.buildingName, unitNumber:S.unitNumber,
+        address:S.address, accessInfo:S.accessInfo,
+        visitType:S.visitType||'',
+        dateISO:dateISO, timeStr:S.selectedTime,
+        visitDate:dateStr, visitTime:S.selectedTime,
+        inspector:insp.name,
+        inspectorEmail:insp.email,
+        notes:S.notes||''
     };
-  }
+
+    // 1. Google Calendar via Apps Script (com verificação de conflito)
+    if (CONFIG.appsScriptUrl) {
+        try {
+            const res = await fetch(CONFIG.appsScriptUrl, {
+                method:'POST',
+                headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams(payload).toString()
+            });
+            const result = await res.json();
+            if (result.status === 'conflict') {
+                // Horário já ocupado — volta para seleção de horário
+                const btn = document.querySelector('.btn-primary');
+                if(btn){ btn.disabled=false; btn.textContent='Confirmar agendamento'; }
+                showConflictError(result.message);
+                return;
+            }
+        } catch(e) { console.warn('Apps Script error:', e); }
+    }
+
+    // 2. Netlify Forms (backup)
+    try {
+        await fetch('/', {
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({'form-name':'agendamento-vistoria','bot-field':'',...payload}).toString()
+        });
+    } catch(e) { console.warn('Netlify form error:', e); }
+}
+
+function showConflictError(msg) {
+    // Volta para o passo de horários e exibe aviso
+    S.selectedTime = null;
+    goToStep(4);
+    const c = document.getElementById('timesContainer');
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(229,62,62,0.1);border-left:4px solid #E53E3E;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#fc8181;line-height:1.6;';
+    banner.innerHTML = `⚠️ <strong>Horário indisponível:</strong> ${msg}`;
+    c.parentNode.insertBefore(banner, c);
+    loadSlots(); // recarrega slots atualizados
 }
 
 </script>
