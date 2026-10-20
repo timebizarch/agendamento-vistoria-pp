@@ -1,32 +1,62 @@
 // ============================================================
-// GOOGLE APPS SCRIPT — Agendamento de Vistoria Yuca
-// Cole este código em script.google.com (substitui a versão anterior)
-// e publique uma NOVA VERSÃO do Web App (Implantar → Gerenciar implantações).
+// GOOGLE APPS SCRIPT — Agendamento de Vistoria PP (fluxo HubSpot)
+// Projeto NOVO e independente: não substitui o Apps Script do formulário antigo.
 //
-// Configuração obrigatória (Configurações do projeto → Propriedades do script):
-//   MAKE_WEBHOOK_URL = URL do Custom Webhook do cenário no Make
-// Fuso horário do projeto: America/Sao_Paulo
+// Como instalar (passo a passo no README):
+//   1. script.google.com → Novo projeto → cole este código
+//   2. Configurações do projeto → Fuso horário: (GMT-03:00) São Paulo
+//   3. Rode a função setup() uma vez e autorize (cria a planilha e checa a agenda)
+//   4. Implantar → Nova implantação → App da Web
+//        Executar como: Eu · Quem pode acessar: Qualquer pessoa
+//   5. Cole a URL /exec em assets/js/config.js (appsScriptUrl)
+//
+// Propriedades do script (Configurações do projeto → Propriedades do script):
+//   MAKE_WEBHOOK_URL  URL do Custom Webhook do Make          (obrigatória para o HubSpot)
+//   CALENDAR_ID       agenda de vistorias                     (padrão: a mesma do fluxo antigo)
+//   SHEET_ID          planilha de registros                   (criada pelo setup())
+//   ADMIN_EMAIL       quem recebe alertas de erro             (padrão: maiara.pereira@yuca.live)
 // ============================================================
 
-const CALENDAR_ID = 'c_2adaf9b416417c6a87b4cfc9f9c98f4902997aae2fddaa86c8cbd26fc90ec0f4@group.calendar.google.com';
-const SHEET_ID    = '1C_SABiqlkBaOZPlrZDmGVLuaCt6XnBgPbD37MtHLNks';
-const SHEET_NAME  = 'Agendamento de vistoria';
-const SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbwlC-Lqw4EZ8ekGuqdI7awLJzg2-qJbSLjinZM29vrvrCf7lNkz30aYqo0y_M7KFQGn/exec';
-const ADMIN_EMAIL = 'maiara.pereira@yuca.live';
-const TZ          = 'America/Sao_Paulo';
+// Mesma agenda do fluxo antigo: os dois formulários enxergam os mesmos horários ocupados
+const DEFAULT_CALENDAR_ID = 'c_2adaf9b416417c6a87b4cfc9f9c98f4902997aae2fddaa86c8cbd26fc90ec0f4@group.calendar.google.com';
+const DEFAULT_ADMIN_EMAIL = 'maiara.pereira@yuca.live';
+const SHEET_NAME = 'Agendamentos';
+const TZ = 'America/Sao_Paulo';
+const HUBSPOT_TICKET_URL = 'https://app.hubspot.com/contacts/50709614/record/0-5/';
 
 const VISIT_MS  = 60 * 60 * 1000; // duração da vistoria: 1h
 const BUFFER_MS = 60 * 60 * 1000; // deslocamento: 1h antes e 1h depois
 
-// Colunas da planilha (a ordem só importa na criação; a gravação é feita pelo nome do cabeçalho)
 const HEADERS = [
-  'Data do envio', 'Proprietário', 'Telefone', 'E-mail do proprietário',
-  'Edifício', 'Unidade', 'Endereço', 'Acesso à unidade',
-  'Tipo de vistoria', 'Data da vistoria', 'Horário',
-  'Vistoriador/a', 'E-mail do vistoriador', 'Observações',
-  'Status', 'Confirmada em', 'ID',
-  'HubSpot Ticket ID', 'Presença do proprietário', 'Sync HubSpot'
+  'Data do envio', 'HubSpot Ticket ID', 'Proprietário', 'Telefone', 'E-mail do proprietário',
+  'Unidade', 'Data da vistoria', 'Horário', 'Vistoriador/a', 'E-mail do vistoriador',
+  'Presença do proprietário', 'Recado', 'Status', 'Confirmada em', 'ID', 'Sync HubSpot'
 ];
+
+// ============================================================
+// SETUP — rode uma vez no editor
+// ============================================================
+function setup() {
+  const props = PropertiesService.getScriptProperties();
+
+  let sheetId = props.getProperty('SHEET_ID');
+  if (!sheetId) {
+    const ss = SpreadsheetApp.create('Agendamento de Vistoria PP — HubSpot');
+    ss.getSheets()[0].setName(SHEET_NAME);
+    sheetId = ss.getId();
+    props.setProperty('SHEET_ID', sheetId);
+  }
+  const sheet = getSheet();
+  console.log('Planilha: https://docs.google.com/spreadsheets/d/' + sheetId + ' (aba "' + sheet.getName() + '")');
+
+  const cal = getCalendar(); // lança erro se não houver acesso
+  console.log('Agenda OK: ' + cal.getName());
+
+  if (!props.getProperty('MAKE_WEBHOOK_URL')) {
+    console.warn('Falta a propriedade MAKE_WEBHOOK_URL — sem ela o agendamento funciona, mas o HubSpot não é atualizado.');
+  }
+  console.log('URL do Web App (depois de implantar): ' + (ScriptApp.getService().getUrl() || 'ainda não implantado'));
+}
 
 // ============================================================
 // doGet — horários ocupados OU página de confirmação
@@ -66,12 +96,14 @@ function doPost(e) {
     if (!data.hubspotTicketId) {
       return json({ status: 'error', message: 'Link sem identificação do HubSpot.' });
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data.dateISO) || !/^\d{2}:\d{2}$/.test(data.timeStr)) {
+      return json({ status: 'error', message: 'Data ou horário inválido.' });
+    }
 
     const inicio = inicioDaVistoria(data);
     const fim    = new Date(inicio.getTime() + VISIT_MS);
     const conflitos = getCalendar().getEvents(new Date(inicio.getTime() - BUFFER_MS), new Date(fim.getTime() + BUFFER_MS));
     if (conflitos.length > 0) {
-      registrarTentativa(data, 'Conflito de horário');
       return json({
         status: 'conflict',
         message: 'Este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.'
@@ -79,35 +111,33 @@ function doPost(e) {
     }
 
     const confirmId = Utilities.getUuid();
-    const eventId   = criarEvento(data, confirmId);
+    const eventId   = criarEvento(data, inicio, fim, confirmId);
     const linha     = registrarNaPlanilha(data, confirmId);
-    const sync      = notificarMake('vistoria_agendada', payloadAgendamento(data, inicio, confirmId, eventId));
-    marcarSync(linha, sync);
+    marcarSync(linha, notificarMake('vistoria_agendada', payloadAgendamento(data, inicio, confirmId, eventId)));
 
     return json({ status: 'ok' });
   } catch (err) {
     console.error('Erro:', err);
-    alertarAdmin('⚠️ Erro no agendamento de vistoria',
+    alertarAdmin('⚠️ Erro no agendamento de vistoria (fluxo HubSpot)',
       'Houve um erro ao processar um agendamento.\n\n'
       + 'Proprietário: ' + (data.ownerName || '?') + '\n'
       + 'Unidade: ' + (data.unitName || '?') + '\n'
       + 'HubSpot Ticket ID: ' + (data.hubspotTicketId || '?') + '\n'
       + 'Data/horário tentado: ' + (data.visitDate || data.dateISO || '?') + ' às ' + (data.timeStr || '?') + '\n\n'
       + 'Erro: ' + err.toString() + '\n\n'
-      + 'Verifique se o evento foi criado no calendário, se foi registrado na planilha e se o ticket foi atualizado no HubSpot.');
+      + 'Verifique se o evento foi criado na agenda, se foi registrado na planilha e se o ticket foi atualizado no HubSpot.');
     return json({ status: 'error', message: err.toString() });
   } finally {
     lock.releaseLock();
   }
 }
 
-// Aceita o formato novo (unitName) e o antigo (buildingName + unitNumber)
 function normalizar(p) {
   const d = {};
   Object.keys(p).forEach(function (k) { d[k] = String(p[k] || '').trim(); });
   d.hubspotTicketId = (d.hubspotTicketId || '').replace(/\D/g, '');
-  if (!d.unitName) d.unitName = [d.buildingName, d.unitNumber].filter(Boolean).join(' — ');
-  if (!d.timeStr) d.timeStr = d.visitTime || '';
+  d.dateISO = d.dateISO || '';
+  d.timeStr = d.timeStr || d.visitTime || '';
   return d;
 }
 
@@ -146,7 +176,7 @@ function payloadAgendamento(data, inicio, confirmId, eventId) {
       vistoriador: data.inspector,
       calendar_event_id: eventId,
       confirm_id: confirmId,
-      link_confirmacao: SCRIPT_URL + '?action=confirmar&id=' + confirmId
+      link_confirmacao: linkConfirmacao(confirmId)
     }
   };
 }
@@ -184,14 +214,10 @@ function notificarMake(evento, payload) {
 function confirmarVistoria(confirmId) {
   if (!confirmId) return HtmlService.createHtmlOutput('<p>Link inválido.</p>');
 
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-  if (!sheet || sheet.getLastRow() < 2) return HtmlService.createHtmlOutput('<p>Planilha não encontrada.</p>');
+  const sheet = getSheet();
+  if (sheet.getLastRow() < 2) return HtmlService.createHtmlOutput('<p>Agendamento não encontrado.</p>');
 
   const col = mapaColunas(sheet);
-  if (!col['ID'] || !col['Status'] || !col['Confirmada em']) {
-    return HtmlService.createHtmlOutput('<p>Estrutura da planilha desatualizada. Entre em contato com o suporte.</p>');
-  }
-
   const ids = sheet.getRange(2, col['ID'], sheet.getLastRow() - 1, 1).getValues();
   let foundRow = -1;
   for (let i = 0; i < ids.length; i++) {
@@ -222,9 +248,7 @@ function confirmarVistoria(confirmId) {
     }
   }
 
-  const unidade = [cell('Edifício'), cell('Unidade')].filter(Boolean).join(' — ');
   const msg = jaConfirmada ? 'Vistoria já estava confirmada ✓' : 'Vistoria confirmada com sucesso!';
-
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -258,7 +282,7 @@ function confirmarVistoria(confirmId) {
       <p class="sub">Obrigada! O status foi atualizado na planilha e no HubSpot automaticamente.</p>
       <div class="detail">
         <div><strong>Proprietário:</strong> ${esc(cell('Proprietário'))}</div>
-        <div><strong>Unidade:</strong> ${esc(unidade)}</div>
+        <div><strong>Unidade:</strong> ${esc(cell('Unidade'))}</div>
         <div><strong>Data:</strong> ${esc(cell('Data da vistoria'))}</div>
         <div><strong>Horário:</strong> ${esc(cell('Horário'))}</div>
       </div>
@@ -271,42 +295,28 @@ function confirmarVistoria(confirmId) {
 }
 
 // ============================================================
-// PLANILHA — grava na aba "Agendamento de vistoria"
+// PLANILHA
 // ============================================================
 function registrarNaPlanilha(data, confirmId) {
-  const ss  = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName(SHEET_NAME);
-
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(HEADERS);
-    sheet.setFrozenRows(1);
-  }
-  garantirCabecalhos(sheet);
-
+  const sheet = getSheet();
   const valores = {
     'Data do envio': Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy HH:mm'),
+    'HubSpot Ticket ID': data.hubspotTicketId,
     'Proprietário': data.ownerName,
     'Telefone': data.ownerPhone,
     'E-mail do proprietário': data.ownerEmail,
-    'Edifício': data.buildingName || '',
-    'Unidade': data.buildingName ? data.unitNumber : data.unitName,
-    'Endereço': data.address,
-    'Acesso à unidade': data.accessInfo,
-    'Tipo de vistoria': data.visitType,
+    'Unidade': data.unitName,
     'Data da vistoria': data.visitDate || data.dateISO,
     'Horário': data.timeStr,
     'Vistoriador/a': data.inspector,
     'E-mail do vistoriador': data.inspectorEmail,
-    'Observações': data.notes,
+    'Presença do proprietário': data.presenceLabel,
+    'Recado': data.notes,
     'Status': 'Agendada',
     'Confirmada em': '',
     'ID': confirmId,
-    'HubSpot Ticket ID': data.hubspotTicketId,
-    'Presença do proprietário': data.presenceLabel || '',
     'Sync HubSpot': ''
   };
-
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   sheet.appendRow(headers.map(function (h) { return valores[h] !== undefined ? valores[h] : ''; }));
   return { sheet: sheet, row: sheet.getLastRow() };
@@ -319,15 +329,22 @@ function marcarSync(linha, status) {
   } catch (err) { console.error('Erro ao marcar sync:', err); }
 }
 
-// Adiciona ao final as colunas que ainda não existem (planilhas de versões anteriores)
-function garantirCabecalhos(sheet) {
-  const existentes = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+// Abre a aba de registros, criando a aba e os cabeçalhos que faltarem
+function getSheet() {
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  if (!sheetId) throw new Error('Rode setup() no editor antes de usar (falta SHEET_ID).');
+  const ss = SpreadsheetApp.openById(sheetId);
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
+
+  const existentes = sheet.getLastColumn() ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0] : [];
   const faltando = HEADERS.filter(function (h) { return existentes.indexOf(h) === -1; });
   if (faltando.length) {
-    sheet.getRange(1, sheet.getLastColumn() + 1, 1, faltando.length).setValues([faltando]);
+    sheet.getRange(1, existentes.filter(String).length + 1, 1, faltando.length).setValues([faltando]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, sheet.getLastColumn()).setFontWeight('bold').setBackground('#005956').setFontColor('white');
   }
-  sheet.getRange(1, 1, 1, sheet.getLastColumn())
-       .setFontWeight('bold').setBackground('#005956').setFontColor('white');
+  return sheet;
 }
 
 function mapaColunas(sheet) {
@@ -340,16 +357,13 @@ function mapaColunas(sheet) {
 // ============================================================
 // EVENTO no Google Calendar
 // ============================================================
-function criarEvento(data, confirmId) {
-  const inicio = inicioDaVistoria(data);
-  const fim    = new Date(inicio.getTime() + VISIT_MS);
+function criarEvento(data, inicio, fim, confirmId) {
   const presente = data.presence === 'yes';
-  const titulo = 'Vistoria - ' + data.unitName + (presente ? ' · PP presente' : '');
-  const confirmLink = SCRIPT_URL + '?action=confirmar&id=' + confirmId;
+  const titulo = 'Vistoria - ' + (data.unitName || 'unidade') + (presente ? ' · PP presente' : '');
 
   // Presença e recado do PP ficam só aqui (não vão para o ticket do HubSpot)
   const linhas = [
-    (presente ? '👤 O PROPRIETÁRIO ESTARÁ PRESENTE' : '🏠 Proprietário não estará presente'),
+    presente ? '👤 O PROPRIETÁRIO ESTARÁ PRESENTE' : '🏠 Proprietário não estará presente',
     data.notes ? '📝 Recado do proprietário: ' + data.notes : null,
     '',
     'Proprietário: ' + data.ownerName,
@@ -357,16 +371,14 @@ function criarEvento(data, confirmId) {
     'E-mail: ' + data.ownerEmail,
     'Unidade: ' + data.unitName,
     data.address ? 'Endereço: ' + data.address : null,
-    data.accessInfo ? 'Acesso: ' + data.accessInfo : null,
     'Vistoriador: ' + data.inspector,
     'Tipo: ' + (data.visitType || ''),
-    'HubSpot: https://app.hubspot.com/contacts/50709614/record/0-5/' + data.hubspotTicketId,
+    'HubSpot: ' + HUBSPOT_TICKET_URL + data.hubspotTicketId,
     '',
     '✅ Confirmar vistoria realizada:',
-    confirmLink
+    linkConfirmacao(confirmId)
   ];
   const desc = linhas.filter(function (l) { return l !== null; }).join('\n');
-
   const guests = [data.inspectorEmail, data.ownerEmail].filter(Boolean);
 
   const cal = getCalendar();
@@ -384,40 +396,19 @@ function criarEvento(data, confirmId) {
 }
 
 // ============================================================
-// TENTATIVAS BLOQUEADAS — loga conflitos numa aba separada
-// ============================================================
-function registrarTentativa(data, motivo) {
-  try {
-    const ss  = SpreadsheetApp.openById(SHEET_ID);
-    let sheet = ss.getSheetByName('Tentativas bloqueadas');
-    if (!sheet) {
-      sheet = ss.insertSheet('Tentativas bloqueadas');
-      const headers = [
-        'Data da tentativa', 'Proprietário', 'Telefone', 'E-mail',
-        'Edifício', 'Unidade', 'Data tentada', 'Horário tentado',
-        'Vistoriador/a', 'Motivo', 'HubSpot Ticket ID'
-      ];
-      sheet.appendRow(headers);
-      sheet.setFrozenRows(1);
-      sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#CE6363').setFontColor('white');
-    }
-    sheet.appendRow([
-      Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy HH:mm'),
-      data.ownerName, data.ownerPhone, data.ownerEmail,
-      '', data.unitName,
-      data.visitDate || data.dateISO, data.timeStr,
-      data.inspector, motivo || 'Conflito de horário', data.hubspotTicketId
-    ]);
-  } catch (err) {
-    console.error('Erro ao registrar tentativa:', err);
-  }
-}
-
-// ============================================================
 // UTILITÁRIOS
 // ============================================================
+// Falha de propósito se a conta não tiver acesso à agenda: cair na agenda pessoal
+// faria o formulário mostrar horários livres que na verdade estão ocupados.
 function getCalendar() {
-  return CalendarApp.getCalendarById(CALENDAR_ID) || CalendarApp.getDefaultCalendar();
+  const id = PropertiesService.getScriptProperties().getProperty('CALENDAR_ID') || DEFAULT_CALENDAR_ID;
+  const cal = CalendarApp.getCalendarById(id);
+  if (!cal) throw new Error('Sem acesso à agenda ' + id + '. Peça para compartilharem com permissão "Fazer alterações nos eventos".');
+  return cal;
+}
+
+function linkConfirmacao(confirmId) {
+  return ScriptApp.getService().getUrl() + '?action=confirmar&id=' + confirmId;
 }
 
 function json(obj) {
@@ -431,43 +422,20 @@ function esc(s) {
 }
 
 function alertarAdmin(assunto, corpo) {
-  try { MailApp.sendEmail({ to: ADMIN_EMAIL, subject: assunto, body: corpo }); }
+  const to = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || DEFAULT_ADMIN_EMAIL;
+  try { MailApp.sendEmail({ to: to, subject: assunto, body: corpo }); }
   catch (mailErr) { console.error('Falha ao enviar e-mail de alerta:', mailErr); }
 }
 
-// Rode no editor para testar o fluxo completo (cria evento real na agenda!)
-function testar() {
-  const data = normalizar({
-    hubspotTicketId: '49623137077',
-    ownerName: 'Proprietário Teste',
-    ownerPhone: '(11) 99999-9999',
-    ownerEmail: 'maiara.pereira@yuca.live',
-    unitName: 'Edifício Teste — Apto 42',
-    visitType: 'Unidade pronta para Gestão Yuca',
-    dateISO: '2026-12-01',
-    visitDate: 'Terça-feira, 1 de dezembro de 2026',
-    timeStr: '09:00',
-    inspector: 'Ariene Saldanha Rosa',
-    inspectorHubspot: 'Ariene Saldanha',
-    inspectorEmail: 'asaldanharosa@gmail.com',
-    presence: 'no',
-    presenceLabel: 'Não estarei presente',
-    notes: 'Teste'
-  });
-  const confirmId = Utilities.getUuid();
-  const eventId = criarEvento(data, confirmId);
-  const linha = registrarNaPlanilha(data, confirmId);
-  marcarSync(linha, notificarMake('vistoria_agendada', payloadAgendamento(data, inicioDaVistoria(data), confirmId, eventId)));
-}
-
-// Rode no editor para mandar só o JSON de exemplo ao Make (útil para o "Redetermine data structure")
+// Rode no editor para mandar só o JSON de exemplo ao Make (útil para o "Redetermine data structure").
+// Não cria evento nem linha na planilha.
 function testarSomenteMake() {
   const data = normalizar({
     hubspotTicketId: '49623137077', ownerName: 'Proprietário Teste', ownerPhone: '(11) 99999-9999',
-    ownerEmail: 'teste@yuca.live', unitName: 'Edifício Teste — Apto 42', visitType: 'Unidade pronta para Gestão Yuca', dateISO: '2026-12-01',
-    visitDate: 'Terça-feira, 1 de dezembro de 2026', timeStr: '09:00', inspector: 'Ariene Saldanha Rosa',
-    inspectorHubspot: 'Ariene Saldanha', inspectorEmail: 'asaldanharosa@gmail.com', presence: 'yes',
-    presenceLabel: 'Estarei presente', notes: 'Teste'
+    ownerEmail: 'teste@yuca.live', unitName: 'Edifício Teste — Apto 42', visitType: 'Unidade pronta para Gestão Yuca',
+    dateISO: '2026-12-01', visitDate: 'Terça-feira, 1 de dezembro de 2026', timeStr: '09:00',
+    inspector: 'Ariene Saldanha Rosa', inspectorHubspot: 'Ariene Saldanha', inspectorEmail: 'asaldanharosa@gmail.com',
+    presence: 'yes', presenceLabel: 'Estarei presente', notes: 'Teste'
   });
   console.log(notificarMake('vistoria_agendada', payloadAgendamento(data, inicioDaVistoria(data), 'teste', 'teste')));
 }
