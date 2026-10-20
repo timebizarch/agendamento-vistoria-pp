@@ -2,8 +2,9 @@
    CONFIGURAÇÃO — edite aqui sem mexer na lógica (app.js)
    ============================================================ */
 window.CONFIG = {
-    // Web App do Google Apps Script (agenda + planilha + repasse ao Make/HubSpot)
-    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbwlC-Lqw4EZ8ekGuqdI7awLJzg2-qJbSLjinZM29vrvrCf7lNkz30aYqo0y_M7KFQGn/exec',
+    // Web App do Apps Script NOVO (apps-script/Code.gs) — agenda + planilha + repasse ao Make/HubSpot.
+    // Não use a URL do formulário antigo: ele espera outros campos.
+    appsScriptUrl: 'COLE_AQUI_A_URL_EXEC_DO_NOVO_APPS_SCRIPT',
 
     // Nomes dos parâmetros que o Make coloca no link enviado ao proprietário.
     // Ex.: https://SEU-SITE.netlify.app/?hs_id=123&nome=Ana%20Silva&telefone=11999999999&email=ana%40x.com&unidade=Ed.%20Solar%20-%2042
