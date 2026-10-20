@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="same-origin">
+    <meta name="theme-color" content="#005956">
+    <title>Agendar Vistoria | Yuca</title>
+    <link rel="icon" type="image/png" href="assets/img/logo-yuca-verde.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<!-- NETLIFY FORMS: formulário oculto só para o Netlify detectar os campos no deploy (backup das respostas) -->
+<form name="agendamento-vistoria" netlify netlify-honeypot="bot-field" hidden>
+    <input name="bot-field">
+    <input name="hubspotTicketId">
+    <input name="ownerName"><input name="ownerPhone"><input name="ownerEmail"><input name="unitName">
+    <input name="visitType"><input name="visitDate"><input name="visitTime">
+    <input name="inspector"><input name="presence"><input name="notes">
+</form>
+
+<div class="app">
+    <!-- Cabeçalho Yuca -->
+    <header class="yuca-header">
+        <img class="yuca-logo" src="assets/img/logo-yuca-branca.svg" alt="Yuca" width="40" height="41">
+        <div class="yuca-header-text">
+            <span class="yuca-kicker">Agendamento de vistoria</span>
+            <span class="yuca-header-title">Unidade pronta para Gestão Yuca</span>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <nav class="nav" id="nav">
+        <button class="nav-btn" id="btnBack" type="button" onclick="goBack()">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar
+        </button>
+        <span class="nav-step" id="navStep"></span>
+    </nav>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <main class="content">
+
+        <!-- Link inválido (sem ID do HubSpot) -->
+        <section class="step" id="step-invalid">
+            <div class="state-icon state-icon--warn">!</div>
+            <h2 class="state-title">Link incompleto</h2>
+            <p class="state-subtitle">Não conseguimos identificar o seu cadastro neste link. Use o link exatamente como foi enviado pela Yuca ou fale com a gente para receber um novo.</p>
+            <a class="btn-secondary" id="invalidContact" target="_blank" rel="noopener">Falar com a Yuca no WhatsApp</a>
+        </section>
+
+        <!-- Etapa 1: Vistoriador + presença -->
+        <section class="step" id="step-1">
+            <span class="step-num">Etapa 01</span>
+            <h2 class="step-title" id="greeting">Vamos agendar sua vistoria</h2>
+            <p class="step-lead" id="unitLead">Seus dados e os da unidade já estão com a gente. Falta só escolher o melhor dia e horário.</p>
+
+            <div class="choice-card is-selected is-static">
+                <div class="choice-title">Unidade pronta para Gestão Yuca</div>
+                <div class="choice-desc">Sua unidade está pronta para ser locada. Faremos a vistoria de recebimento, as fotos da unidade para o site e as fotos das áreas comuns.</div>
+            </div>
+
+            <div class="inspector-card" id="inspectorInfoCard"></div>
+
+            <div class="callout callout--cream">
+                <strong>Você não precisa estar presente.</strong> O laudo será enviado para você assim que a vistoria for concluída.
+            </div>
+
+            <label class="field-label">Você vai estar presente na vistoria? *</label>
+            <div class="toggle-group" role="radiogroup">
+                <button type="button" class="toggle" id="pres-yes" role="radio" aria-checked="false" onclick="selectPresence('yes')">Estarei presente</button>
+                <button type="button" class="toggle" id="pres-no" role="radio" aria-checked="false" onclick="selectPresence('no')">Não estarei presente</button>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="notes">Recado para o vistoriador <span class="optional">(opcional)</span></label>
+                <textarea class="field-input" id="notes" maxlength="1000"
+                    placeholder="Ex: avisar a portaria, acesso pelo elevador social..."></textarea>
+            </div>
+        </section>
+
+        <!-- Etapa 2: Data -->
+        <section class="step" id="step-2">
+            <span class="step-num">Etapa 02</span>
+            <h2 class="step-title">Escolha uma data</h2>
+            <div class="summary-card" id="summaryCard"></div>
+            <div class="month-nav">
+                <button class="icon-btn" id="btnPrevMonth" type="button" onclick="changeMonth(-1)" aria-label="Mês anterior">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <span class="month-label" id="monthLabel"></span>
+                <button class="icon-btn" id="btnNextMonth" type="button" onclick="changeMonth(1)" aria-label="Próximo mês">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
+            <div class="cal-dow">
+                <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div>
+                <div class="is-off">Sáb</div><div class="is-off">Dom</div>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+        </section>
+
+        <!-- Etapa 3: Horário -->
+        <section class="step" id="step-3">
+            <span class="step-num">Etapa 03</span>
+            <h2 class="step-title">Escolha um horário</h2>
+            <div class="summary-card" id="summaryCard3"></div>
+            <div class="date-pill" id="selectedDateLabel"></div>
+            <div id="conflictBanner"></div>
+            <div class="section-label">Horários disponíveis</div>
+            <p class="field-hint slot-hint">Tempo médio de vistoria: <strong>1h a 1h30</strong></p>
+            <div id="timesContainer"></div>
+        </section>
+
+        <!-- Etapa 4: Revisão -->
+        <section class="step" id="step-4">
+            <span class="step-num">Etapa 04</span>
+            <h2 class="step-title">Revise seu agendamento</h2>
+            <div class="review-card" id="reviewDetails"></div>
+            <div class="review-actions">
+                <button class="btn-primary" id="btnConfirm" type="button" onclick="confirmAgendamento()">Confirmar agendamento</button>
+                <button class="btn-secondary" type="button" onclick="openEdit()">Editar agendamento</button>
+            </div>
+        </section>
+
+        <!-- Etapa 5: Concluído -->
+        <section class="step" id="step-5">
+            <div class="state-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </div>
+            <h2 class="state-title">Agendamento concluído!</h2>
+            <p class="state-subtitle" id="doneSubtitle"></p>
+
+            <div class="liberation-card" id="liberationCard"></div>
+
+            <div class="callout callout--cream">
+                Dúvidas ou precisa de mais alguma informação? Chame a <strong id="supportName"></strong> no WhatsApp:
+                <a id="supportLink" target="_blank" rel="noopener"></a>
+            </div>
+        </section>
+
+    </main>
+
+    <div class="bottom-wrap" id="bottomBar">
+        <button class="btn-primary" id="btnNext" type="button" onclick="goNext()">Próximo</button>
+    </div>
+</div>
+
+<!-- Sheet: Editar agendamento -->
+<div class="sheet-overlay" id="editOverlay" onclick="if(event.target===this) closeEdit()">
+    <div class="sheet">
+        <div class="sheet-title">O que deseja editar?</div>
+        <div class="sheet-options">
+            <button type="button" onclick="goToEdit(1)">Presença e recado</button>
+            <button type="button" onclick="goToEdit(2)">Data</button>
+            <button type="button" onclick="goToEdit(3)">Horário</button>
+        </div>
+        <button type="button" class="sheet-cancel" onclick="closeEdit()">Cancelar</button>
+    </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

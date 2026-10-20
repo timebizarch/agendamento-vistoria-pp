@@ -1,0 +1,16 @@
+# Site estático — sem build. O Netlify publica a raiz do repositório.
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # O link carrega dados pessoais na URL: não indexar e não vazar a URL completa para terceiros
+    X-Robots-Tag = "noindex, nofollow"
+    Referrer-Policy = "same-origin"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
