@@ -344,7 +344,7 @@ async function confirmAgendamento() {
     btn.textContent = 'Enviando...';
 
     const payload = buildPayload();
-    let result = { status: 'ok' };
+    let result;
 
     // 1. Apps Script: checa conflito, cria evento, grava planilha e repassa ao Make → HubSpot
     try {
@@ -354,7 +354,10 @@ async function confirmAgendamento() {
             body: new URLSearchParams(payload).toString(),
         });
         result = await res.json();
-    } catch (e) { console.warn('Apps Script error:', e); }
+    } catch (e) {
+        console.warn('Apps Script error:', e);
+        result = { status: 'error' };
+    }
 
     S.submitting = false;
     btn.disabled = false;
